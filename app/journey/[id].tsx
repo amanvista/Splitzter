@@ -3,19 +3,36 @@ import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import { useCallback, useState } from 'react';
 import {
   Alert,
-  FlatList,
   ScrollView,
+  StatusBar,
   StyleSheet,
-  TouchableOpacity
+  TouchableOpacity,
+  View,
 } from 'react-native';
 
 import { ShareModal } from '@/components/share-modal';
 import { ThemedText } from '@/components/themed-text';
-import { ThemedView } from '@/components/themed-view';
-import { Colors } from '@/constants/colors';
-import { calculateJourneyBalance, getPersonExpensesSummary } from '@/lib/calculations';
-import { getJourneyById, getJourneyExpenses } from '@/lib/database';
-import { Expense, Journey, JourneyBalance, Person } from '@/types';
+import { calculateJourneyBalance } from '@/lib/calculations';
+import {
+  deleteExpense,
+  getJourneyById,
+  getJourneyExpenses
+} from '@/lib/database';
+import { Expense, Journey, JourneyBalance } from '@/types';
+import { Ionicons } from '@expo/vector-icons';
+
+// Professional Slate/Indigo Palette
+const THEME = {
+  primary: '#6366F1', // Indigo
+  secondary: '#8B5CF6', // Violet
+  background: '#F8FAFC',
+  surface: '#FFFFFF',
+  text: '#1E293B',
+  textMuted: '#64748B',
+  success: '#10B981',
+  error: '#EF4444',
+  border: '#E2E8F0',
+};
 
 export default function JourneyDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -27,7 +44,6 @@ export default function JourneyDetailScreen() {
 
   const loadJourneyData = async () => {
     if (!id) return;
-
     try {
       const journeyData = await getJourneyById(id);
       if (!journeyData) {
@@ -35,10 +51,8 @@ export default function JourneyDetailScreen() {
         router.back();
         return;
       }
-
       const expenseData = await getJourneyExpenses(id);
       const balanceData = calculateJourneyBalance(expenseData, journeyData.participants);
-
       setJourney(journeyData);
       setExpenses(expenseData);
       setBalance(balanceData);
@@ -47,581 +61,236 @@ export default function JourneyDetailScreen() {
     }
   };
 
-  useFocusEffect(
-    useCallback(() => {
-      loadJourneyData();
-    }, [id])
-  );
+  useFocusEffect(useCallback(() => { loadJourneyData(); }, [id]));
 
-  const getPersonName = (personId: string): string => {
-    return journey?.participants.find(p => p.id === personId)?.name || 'Unknown';
+  const getPersonName = (personId: string) => 
+    journey?.participants.find(p => p.id === personId)?.name || 'Unknown';
+
+  const confirmDelete = (expense: Expense) => {
+    Alert.alert(
+      'Delete Expense',
+      `Are you sure you want to delete "${expense.title}"?`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        { 
+          text: 'Delete', 
+          style: 'destructive', 
+          onPress: async () => {
+            try {
+              await deleteExpense(expense.id);
+              loadJourneyData(); // Refresh list and totals
+            } catch (error) {
+              Alert.alert('Error', 'Could not delete expense');
+            }
+          } 
+        },
+      ]
+    );
   };
 
-  const handleShare = async () => {
-    if (!journey) return;
-    setShowShareModal(true);
-  };
-
-  const renderExpense = ({ item }: { item: Expense }) => (
-    <TouchableOpacity
-      style={styles.expenseCard}
-      onPress={() => router.push(`/edit-expense/${item.id}`)}
-      activeOpacity={0.7}
-    >
-      <ThemedView style={styles.expenseHeader}>
-        <ThemedView style={styles.expenseIcon}>
-          <ThemedText style={styles.expenseIconText}>💰</ThemedText>
-        </ThemedView>
-        <ThemedView style={styles.expenseInfo}>
-          <ThemedText style={styles.expenseTitle}>{item.title}</ThemedText>
-          <ThemedText style={styles.expenseDetails}>
-            Paid by {getPersonName(item.paidBy)}
-          </ThemedText>
+  const renderExpense = (item: Expense) => (
+    <View key={item.id} style={styles.expenseWrapper}>
+      <TouchableOpacity
+        style={styles.expenseCard}
+        onPress={() => router.push(`/edit-expense/${item.id}`)}
+        activeOpacity={0.6}
+      >
+        <View style={styles.expenseIconWrapper}>
+          <Ionicons name="card-outline" size={20} color={THEME.primary} />
+        </View>
+        <View style={styles.expenseMain}>
+          <ThemedText style={styles.expenseTitle} numberOfLines={1}>{item.title}</ThemedText>
+          <ThemedText style={styles.expenseSub}>Paid by {getPersonName(item.paidBy)}</ThemedText>
+        </View>
+        <View style={styles.expenseRight}>
+          <ThemedText style={styles.expenseAmount}>₹{item.amount.toLocaleString()}</ThemedText>
           <ThemedText style={styles.expenseDate}>
-            {new Date(item.date).toLocaleDateString()}
+            {new Date(item.date).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
           </ThemedText>
-        </ThemedView>
-        <ThemedView style={styles.expenseAmountContainer}>
-          <ThemedText style={styles.expenseAmount}>${item.amount.toFixed(2)}</ThemedText>
-          <ThemedText style={styles.editHint}>Tap to edit</ThemedText>
-        </ThemedView>
-      </ThemedView>
-      <ThemedView style={styles.expenseSplit}>
-        <ThemedText style={styles.splitLabel}>Split between:</ThemedText>
-        <ThemedText style={styles.splitNames}>
-          {item.splitBetween.map(id => getPersonName(id)).join(', ')}
-        </ThemedText>
-      </ThemedView>
-    </TouchableOpacity>
+        </View>
+      </TouchableOpacity>
+      
+      <TouchableOpacity 
+        style={styles.deleteBtn} 
+        onPress={() => confirmDelete(item)}
+        activeOpacity={0.5}
+      >
+        <Ionicons name="trash-outline" size={20} color={THEME.error} />
+      </TouchableOpacity>
+    </View>
   );
 
-  const renderParticipantSummary = ({ item }: { item: Person }) => {
-    const summary = getPersonExpensesSummary(expenses, item.id);
-    const balanceAmount = balance?.balances[item.id] || 0;
-    
-    return (
-      <ThemedView style={styles.participantCard}>
-        <ThemedView style={styles.participantHeader}>
-          <ThemedView style={[
-            styles.participantAvatar,
-            { backgroundColor: balanceAmount > 0 ? Colors.warningLight : balanceAmount < 0 ? Colors.successLight : Colors.textLight }
-          ]}>
-            <ThemedText style={styles.participantInitial}>
-              {item.name.charAt(0).toUpperCase()}
-            </ThemedText>
-          </ThemedView>
-          <ThemedView style={styles.participantInfo}>
-            <ThemedText style={styles.participantName}>{item.name}</ThemedText>
-            <ThemedText style={[
-              styles.participantBalance,
-              balanceAmount > 0 ? styles.owesText : balanceAmount < 0 ? styles.owedText : styles.settledText
-            ]}>
-              {balanceAmount > 0 
-                ? `Owes $${balanceAmount.toFixed(2)}`
-                : balanceAmount < 0
-                ? `Owed $${Math.abs(balanceAmount).toFixed(2)}`
-                : 'All settled'
-              }
-            </ThemedText>
-          </ThemedView>
-        </ThemedView>
-        <ThemedView style={styles.participantStats}>
-          <ThemedView style={styles.statColumn}>
-            <ThemedText style={styles.statAmount}>${summary.totalPaid.toFixed(2)}</ThemedText>
-            <ThemedText style={styles.statLabel}>Paid</ThemedText>
-          </ThemedView>
-          <ThemedView style={styles.statColumn}>
-            <ThemedText style={styles.statAmount}>${summary.totalShare.toFixed(2)}</ThemedText>
-            <ThemedText style={styles.statLabel}>Share</ThemedText>
-          </ThemedView>
-        </ThemedView>
-      </ThemedView>
-    );
-  };
-
-  const renderSettlement = ({ item }: { item: any }) => (
-    <ThemedView style={styles.settlementCard}>
-      <ThemedView style={styles.settlementIcon}>
-        <ThemedText style={styles.settlementIconText}>💸</ThemedText>
-      </ThemedView>
-      <ThemedText style={styles.settlementText}>
-        {getPersonName(item.from)} pays {getPersonName(item.to)} ${item.amount.toFixed(2)}
-      </ThemedText>
-    </ThemedView>
-  );
-
-  if (!journey) {
-    return (
-      <ThemedView style={styles.container}>
-        <LinearGradient
-          colors={[Colors.gradientStart, Colors.gradientEnd]}
-          style={styles.loadingHeader}
-        >
-          <ThemedText style={styles.loadingText}>Loading journey...</ThemedText>
-        </LinearGradient>
-      </ThemedView>
-    );
-  }
+  if (!journey) return null;
 
   return (
-    <ScrollView style={styles.container}>
-      <LinearGradient
-        colors={[Colors.gradientStart, Colors.gradientEnd]}
-        style={styles.header}
-      >
-        <ThemedView style={styles.headerTop}>
-          <ThemedText style={styles.journeyTitle}>{journey.name}</ThemedText>
-          <TouchableOpacity
-            style={styles.shareButton}
-            onPress={handleShare}
-            activeOpacity={0.8}
-          >
-            <ThemedText style={styles.shareIcon}>📤</ThemedText>
-          </TouchableOpacity>
-        </ThemedView>
-        {journey.description && (
-          <ThemedText style={styles.journeyDescription}>{journey.description}</ThemedText>
-        )}
+    <View style={styles.container}>
+      <StatusBar barStyle="light-content" />
+      <ScrollView showsVerticalScrollIndicator={false}>
         
-        <ThemedView style={styles.summaryCards}>
-          <ThemedView style={styles.summaryCard}>
-            <ThemedText style={styles.summaryAmount}>
-              ${balance?.totalExpenses.toFixed(2) || '0.00'}
-            </ThemedText>
-            <ThemedText style={styles.summaryLabel}>Total Spent</ThemedText>
-          </ThemedView>
-          <ThemedView style={styles.summaryCard}>
-            <ThemedText style={styles.summaryAmount}>{expenses.length}</ThemedText>
-            <ThemedText style={styles.summaryLabel}>Expenses</ThemedText>
-          </ThemedView>
-          <ThemedView style={styles.summaryCard}>
-            <ThemedText style={styles.summaryAmount}>{journey.participants.length}</ThemedText>
-            <ThemedText style={styles.summaryLabel}>Members</ThemedText>
-          </ThemedView>
-        </ThemedView>
+        {/* Header Section */}
+        <LinearGradient colors={[THEME.primary, THEME.secondary]} style={styles.header}>
+          <View style={styles.navBar}>
+            <TouchableOpacity onPress={() => router.back()} style={styles.iconBtn}>
+              <Ionicons name="chevron-back" size={24} color="#fff" />
+            </TouchableOpacity>
+            <TouchableOpacity onPress={() => setShowShareModal(true)} style={styles.iconBtn}>
+              <Ionicons name="share-social-outline" size={22} color="#fff" />
+            </TouchableOpacity>
+          </View>
 
-        <ThemedView style={styles.actionButtons}>
-          <TouchableOpacity
-            style={styles.addExpenseButton}
-            onPress={() => router.push(`/add-expense?journeyId=${id}`)}
-            activeOpacity={0.8}
-          >
-            <ThemedText style={styles.addExpenseIcon}>+</ThemedText>
-            <ThemedText style={styles.addExpenseText}>Add Expense</ThemedText>
-          </TouchableOpacity>
+          <View style={styles.heroContent}>
+            <ThemedText style={styles.journeyName}>{journey.name}</ThemedText>
+            <ThemedText style={styles.mainLabel}>Total Spent</ThemedText>
+            <ThemedText style={styles.mainAmount}>₹{balance?.totalExpenses.toLocaleString()}</ThemedText>
+          </View>
 
-          <TouchableOpacity
-            style={styles.importButton}
-            onPress={() => router.push(`/import-expenses?journeyId=${id}`)}
-            activeOpacity={0.8}
-          >
-            <ThemedText style={styles.importIcon}>📝</ThemedText>
-            <ThemedText style={styles.importText}>Import Text</ThemedText>
-          </TouchableOpacity>
-        </ThemedView>
+          <View style={styles.statsBar}>
+            <View style={styles.statBox}>
+              <ThemedText style={styles.statNum}>{expenses.length}</ThemedText>
+              <ThemedText style={styles.statLabel}>Expenses</ThemedText>
+            </View>
+            <View style={styles.statSep} />
+            <View style={styles.statBox}>
+              <ThemedText style={styles.statNum}>{journey.participants.length}</ThemedText>
+              <ThemedText style={styles.statLabel}>Members</ThemedText>
+            </View>
+          </View>
+        </LinearGradient>
 
-        <TouchableOpacity
-          style={styles.shareButtonBottom}
-          onPress={handleShare}
-          activeOpacity={0.8}
-        >
-          <ThemedText style={styles.shareButtonIcon}>📤</ThemedText>
-          <ThemedText style={styles.shareButtonText}>Share Journey Summary</ThemedText>
-        </TouchableOpacity>
-      </LinearGradient>
+        <View style={styles.body}>
+          {/* Action Row */}
+          <View style={styles.actionRow}>
+            <TouchableOpacity 
+              style={styles.btnPrimary} 
+              onPress={() => router.push(`/add-expense?journeyId=${id}`)}
+            >
+              <Ionicons name="add" size={22} color="#fff" />
+              <ThemedText style={styles.btnTextPrimary}>Add Expense</ThemedText>
+            </TouchableOpacity>
+            <TouchableOpacity 
+              style={styles.btnSecondary}
+              onPress={() => router.push(`/import-expenses?journeyId=${id}`)}
+            >
+              <Ionicons name="scan-outline" size={20} color={THEME.primary} />
+            </TouchableOpacity>
+          </View>
 
-      <ThemedView style={styles.content}>
-        <ThemedView style={styles.section}>
-          <ThemedText style={styles.sectionTitle}>Balances</ThemedText>
-          <FlatList
-            data={journey.participants}
-            renderItem={renderParticipantSummary}
-            keyExtractor={(item) => item.id}
-            scrollEnabled={false}
-          />
-        </ThemedView>
-
-        {balance?.settlements && balance.settlements.length > 0 && (
-          <ThemedView style={styles.section}>
-            <ThemedText style={styles.sectionTitle}>Suggested Payments</ThemedText>
-            <FlatList
-              data={balance.settlements}
-              renderItem={renderSettlement}
-              keyExtractor={(item, index) => `${item.from}-${item.to}-${index}`}
-              scrollEnabled={false}
-            />
-          </ThemedView>
-        )}
-
-        <ThemedView style={styles.section}>
-          <ThemedText style={styles.sectionTitle}>Recent Expenses</ThemedText>
-          {expenses.length === 0 ? (
-            <ThemedView style={styles.emptyExpenses}>
-              <ThemedText style={styles.emptyExpensesText}>No expenses yet</ThemedText>
-              <ThemedText style={styles.emptyExpensesSubtext}>
-                Add your first expense to start tracking
-              </ThemedText>
-            </ThemedView>
-          ) : (
-            <FlatList
-              data={expenses}
-              renderItem={renderExpense}
-              keyExtractor={(item) => item.id}
-              scrollEnabled={false}
-            />
+          {/* Settlements */}
+          {balance?.settlements && balance.settlements.length > 0 && (
+            <View style={styles.section}>
+              <ThemedText style={styles.sectionHeader}>Suggested Payments</ThemedText>
+              <View style={styles.settleBox}>
+                {balance.settlements.map((s, i) => (
+                  <View key={i} style={styles.settleRow}>
+                    <View style={styles.settleIcon}><Ionicons name="arrow-forward" size={14} color="#fff" /></View>
+                    <ThemedText style={styles.settleText}>
+                      <ThemedText style={styles.bold}>{getPersonName(s.from)}</ThemedText> owes <ThemedText style={styles.bold}>{getPersonName(s.to)}</ThemedText>
+                    </ThemedText>
+                    <ThemedText style={styles.settleAmount}>₹{s.amount.toLocaleString()}</ThemedText>
+                  </View>
+                ))}
+              </View>
+            </View>
           )}
-        </ThemedView>
-      </ThemedView>
 
-      {journey && (
-        <ShareModal
-          visible={showShareModal}
-          onClose={() => setShowShareModal(false)}
-          journey={journey}
-          expenses={expenses}
-        />
-      )}
-    </ScrollView>
+          {/* Balances */}
+          <View style={styles.section}>
+            <ThemedText style={styles.sectionHeader}>Group Balances</ThemedText>
+            <View style={styles.card}>
+              {journey.participants.map((p) => {
+                const bal = balance?.balances[p.id] || 0;
+                return (
+                  <View key={p.id} style={styles.pRow}>
+                    <View style={styles.pAvatar}><ThemedText style={styles.pAvatarText}>{p.name[0]}</ThemedText></View>
+                    <View style={{ flex: 1 }}>
+                      <ThemedText style={styles.pName}>{p.name}</ThemedText>
+                      <ThemedText style={[styles.pStatus, bal < 0 ? { color: THEME.success } : bal > 0 ? { color: THEME.error } : {}]}>
+                        {bal < 0 ? 'is owed' : bal > 0 ? 'owes' : 'settled up'}
+                      </ThemedText>
+                    </View>
+                    <ThemedText style={[styles.pAmount, bal < 0 ? { color: THEME.success } : bal > 0 ? { color: THEME.error } : {}]}>
+                      {bal === 0 ? '—' : `₹${Math.abs(bal).toLocaleString()}`}
+                    </ThemedText>
+                  </View>
+                );
+              })}
+            </View>
+          </View>
+
+          {/* Activity */}
+          <View style={styles.section}>
+            <ThemedText style={styles.sectionHeader}>Activity</ThemedText>
+            {expenses.length === 0 ? (
+              <View style={styles.empty}><ThemedText style={styles.emptyText}>Nothing recorded yet</ThemedText></View>
+            ) : (
+              expenses.map(renderExpense)
+            )}
+          </View>
+        </View>
+      </ScrollView>
+
+      <ShareModal 
+        visible={showShareModal} 
+        onClose={() => setShowShareModal(false)} 
+        journey={journey} 
+        expenses={expenses} 
+      />
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: Colors.background,
-  },
-  header: {
-    paddingTop: 60,
-    paddingBottom: 30,
-    paddingHorizontal: 24,
-    borderBottomLeftRadius: 24,
-    borderBottomRightRadius: 24,
-  },
-  headerTop: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    marginBottom: 8,
-  },
-  shareButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  shareIcon: {
-    fontSize: 18,
-  },
-  loadingHeader: {
-    paddingTop: 60,
-    paddingBottom: 30,
-    paddingHorizontal: 24,
-    borderBottomLeftRadius: 24,
-    borderBottomRightRadius: 24,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  loadingText: {
-    fontSize: 18,
-    color: Colors.textInverse,
-  },
-  journeyTitle: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    color: Colors.textInverse,
-    flex: 1,
-    marginRight: 12,
-  },
-  journeyDescription: {
-    fontSize: 16,
-    color: Colors.textInverse,
-    opacity: 0.9,
-    marginBottom: 24,
-  },
-  summaryCards: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: 24,
-  },
-  summaryCard: {
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
-    paddingVertical: 16,
-    paddingHorizontal: 12,
-    borderRadius: 12,
-    alignItems: 'center',
-    flex: 1,
-    marginHorizontal: 4,
-  },
-  summaryAmount: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: Colors.textInverse,
-    marginBottom: 4,
-  },
-  summaryLabel: {
-    fontSize: 12,
-    color: Colors.textInverse,
-    opacity: 0.8,
-  },
-  actionButtons: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: 0,
-  },
-  addExpenseButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderRadius: 25,
-    flex: 1,
-    marginRight: 8,
-    justifyContent: 'center',
-  },
-  addExpenseIcon: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: Colors.textInverse,
-    marginRight: 6,
-  },
-  addExpenseText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: Colors.textInverse,
-  },
-  importButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: 'rgba(255, 255, 255, 0.15)',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderRadius: 25,
-    flex: 1,
-    marginLeft: 8,
-    justifyContent: 'center',
-  },
-  importIcon: {
-    fontSize: 16,
-    marginRight: 6,
-  },
-  importText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: Colors.textInverse,
-  },
-  shareButtonBottom: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
-    paddingHorizontal: 20,
-    paddingVertical: 12,
-    borderRadius: 25,
-    alignSelf: 'center',
-    marginTop: 12,
-  },
-  shareButtonIcon: {
-    fontSize: 16,
-    marginRight: 8,
-  },
-  shareButtonText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: Colors.textInverse,
-  },
-  content: {
-    paddingTop: 20,
-  },
-  section: {
-    marginBottom: 32,
-    paddingHorizontal: 20,
-  },
-  sectionTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: Colors.text,
-    marginBottom: 16,
-  },
-  participantCard: {
-    backgroundColor: Colors.surface,
-    padding: 16,
-    borderRadius: 12,
-    marginBottom: 12,
-    shadowColor: Colors.shadow,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 2,
-  },
-  participantHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 12,
-  },
-  participantAvatar: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: 12,
-  },
-  participantInitial: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: Colors.textInverse,
-  },
-  participantInfo: {
-    flex: 1,
-  },
-  participantName: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: Colors.text,
-    marginBottom: 2,
-  },
-  participantBalance: {
-    fontSize: 14,
-    fontWeight: '500',
-  },
-  owesText: {
-    color: Colors.warning,
-  },
-  owedText: {
-    color: Colors.success,
-  },
-  settledText: {
-    color: Colors.textSecondary,
-  },
-  participantStats: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-    paddingTop: 12,
-    borderTopWidth: 1,
-    borderTopColor: Colors.borderLight,
-  },
-  statColumn: {
-    alignItems: 'center',
-  },
-  statAmount: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: Colors.primary,
-    marginBottom: 2,
-  },
-  statLabel: {
-    fontSize: 12,
-    color: Colors.textLight,
-  },
-  settlementCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: Colors.surface,
-    padding: 16,
-    borderRadius: 12,
-    marginBottom: 8,
-    borderLeftWidth: 4,
-    borderLeftColor: Colors.secondary,
-    shadowColor: Colors.shadow,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 2,
-  },
-  settlementIcon: {
-    marginRight: 12,
-  },
-  settlementIconText: {
-    fontSize: 20,
-  },
-  settlementText: {
-    fontSize: 14,
-    fontWeight: '500',
-    color: Colors.text,
-    flex: 1,
-  },
-  expenseCard: {
-    backgroundColor: Colors.surface,
-    padding: 16,
-    borderRadius: 12,
-    marginBottom: 12,
-    shadowColor: Colors.shadow,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 2,
-  },
-  expenseHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 12,
-  },
-  expenseIcon: {
-    marginRight: 12,
-  },
-  expenseIconText: {
-    fontSize: 20,
-  },
-  expenseInfo: {
-    flex: 1,
-  },
-  expenseTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: Colors.text,
-    marginBottom: 4,
-  },
-  expenseDetails: {
-    fontSize: 14,
-    color: Colors.textSecondary,
-    marginBottom: 2,
-  },
-  expenseDate: {
-    fontSize: 12,
-    color: Colors.textLight,
-  },
-  expenseAmount: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: Colors.primary,
-  },
-  expenseAmountContainer: {
-    alignItems: 'flex-end',
-  },
-  editHint: {
-    fontSize: 10,
-    color: Colors.textLight,
-    marginTop: 2,
-  },
-  expenseSplit: {
-    paddingTop: 12,
-    borderTopWidth: 1,
-    borderTopColor: Colors.borderLight,
-  },
-  splitLabel: {
-    fontSize: 12,
-    color: Colors.textLight,
-    marginBottom: 4,
-  },
-  splitNames: {
-    fontSize: 14,
-    color: Colors.textSecondary,
-  },
-  emptyExpenses: {
-    alignItems: 'center',
-    padding: 32,
-  },
-  emptyExpensesText: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: Colors.text,
-    marginBottom: 8,
-  },
-  emptyExpensesSubtext: {
-    fontSize: 14,
-    color: Colors.textSecondary,
-    textAlign: 'center',
-  },
+  container: { flex: 1, backgroundColor: THEME.background },
+  header: { paddingHorizontal: 20, paddingTop: 50, paddingBottom: 30, borderBottomLeftRadius: 36, borderBottomRightRadius: 36 },
+  navBar: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 20 },
+  iconBtn: { width: 40, height: 40, borderRadius: 12, backgroundColor: 'rgba(255,255,255,0.2)', alignItems: 'center', justifyContent: 'center' },
+  heroContent: { alignItems: 'center', marginBottom: 25 },
+  journeyName: { color: '#fff', fontSize: 14, opacity: 0.8, textTransform: 'uppercase', letterSpacing: 1, fontWeight: '600' },
+  mainLabel: { color: '#fff', fontSize: 12, opacity: 0.7, marginTop: 8 },
+  mainAmount: { color: '#fff', fontSize: 48, fontWeight: '800' },
+  
+  statsBar: { flexDirection: 'row', backgroundColor: 'rgba(255,255,255,0.15)', borderRadius: 20, padding: 15 },
+  statBox: { flex: 1, alignItems: 'center' },
+  statNum: { color: '#fff', fontSize: 18, fontWeight: '700' },
+  statLabel: { color: '#fff', fontSize: 11, opacity: 0.7 },
+  statSep: { width: 1, backgroundColor: 'rgba(255,255,255,0.2)' },
+
+  body: { paddingHorizontal: 20, paddingBottom: 40 },
+  actionRow: { flexDirection: 'row', marginTop: -25, gap: 12, marginBottom: 30 },
+  btnPrimary: { flex: 1, backgroundColor: THEME.primary, height: 56, borderRadius: 18, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, shadowColor: THEME.primary, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 8, elevation: 5 },
+  btnTextPrimary: { color: '#fff', fontSize: 16, fontWeight: '700' },
+  btnSecondary: { width: 56, height: 56, backgroundColor: '#fff', borderRadius: 18, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: THEME.border },
+
+  section: { marginBottom: 30 },
+  sectionHeader: { fontSize: 18, fontWeight: '700', color: THEME.text, marginBottom: 15 },
+  card: { backgroundColor: '#fff', borderRadius: 24, padding: 16, borderWidth: 1, borderColor: THEME.border },
+  
+  pRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 12 },
+  pAvatar: { width: 44, height: 44, borderRadius: 15, backgroundColor: '#F1F5F9', alignItems: 'center', justifyContent: 'center', marginRight: 15 },
+  pAvatarText: { fontSize: 16, fontWeight: '700', color: THEME.textMuted },
+  pName: { fontSize: 16, fontWeight: '600', color: THEME.text },
+  pStatus: { fontSize: 12, color: THEME.textMuted, marginTop: 2 },
+  pAmount: { fontSize: 16, fontWeight: '700' },
+
+  settleBox: { backgroundColor: '#EEF2FF', borderRadius: 24, padding: 20, borderLeftWidth: 5, borderLeftColor: THEME.primary },
+  settleRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 15 },
+  settleIcon: { width: 22, height: 22, borderRadius: 11, backgroundColor: THEME.primary, alignItems: 'center', justifyContent: 'center' },
+  settleText: { flex: 1, marginLeft: 12, fontSize: 14, color: '#4338CA' },
+  settleAmount: { fontSize: 15, fontWeight: '800', color: THEME.primary },
+
+  expenseWrapper: { flexDirection: 'row', alignItems: 'center', marginBottom: 12, gap: 10 },
+  expenseCard: { flex: 1, flexDirection: 'row', alignItems: 'center', backgroundColor: '#fff', padding: 16, borderRadius: 20, borderWidth: 1, borderColor: THEME.border },
+  expenseIconWrapper: { width: 44, height: 44, borderRadius: 15, backgroundColor: '#EEF2FF', alignItems: 'center', justifyContent: 'center', marginRight: 15 },
+  expenseMain: { flex: 1 },
+  expenseTitle: { fontSize: 15, fontWeight: '700', color: THEME.text },
+  expenseSub: { fontSize: 12, color: THEME.textMuted, marginTop: 3 },
+  expenseRight: { alignItems: 'flex-end' },
+  expenseAmount: { fontSize: 16, fontWeight: '700', color: THEME.text },
+  expenseDate: { fontSize: 10, color: THEME.textMuted, marginTop: 4 },
+
+  deleteBtn: { width: 48, height: 56, backgroundColor: '#FFF5F5', borderRadius: 18, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: '#FEE2E2' },
+  
+  bold: { fontWeight: '700' },
+  empty: { padding: 30, alignItems: 'center' },
+  emptyText: { color: THEME.textMuted, fontSize: 14 }
 });
