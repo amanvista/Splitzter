@@ -2,12 +2,12 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
 import {
-    Alert,
-    FlatList,
-    ScrollView,
-    StyleSheet,
-    TextInput,
-    TouchableOpacity,
+  Alert,
+  FlatList,
+  ScrollView,
+  StyleSheet,
+  TextInput,
+  TouchableOpacity,
 } from 'react-native';
 
 import { ThemedText } from '@/components/themed-text';
@@ -15,6 +15,7 @@ import { ThemedView } from '@/components/themed-view';
 import { Colors } from '@/constants/colors';
 import { createExpense, getJourneyById } from '@/lib/database';
 import { getExampleText, ParsedExpense, parseExpenseText } from '@/lib/text-parser';
+import { getCurrentUser } from '@/lib/user-storage';
 import { Expense, Journey, Person } from '@/types';
 
 export default function ImportExpensesScreen() {
@@ -32,12 +33,17 @@ export default function ImportExpensesScreen() {
   useEffect(() => {
     const loadJourney = async () => {
       if (journeyId) {
-        const journeyData = await getJourneyById(journeyId);
+        const [journeyData, user] = await Promise.all([
+          getJourneyById(journeyId),
+          getCurrentUser()
+        ]);
+        
         if (journeyData) {
           setJourney(journeyData);
-          // Set first participant as current user for demo purposes
-          // In a real app, you'd have user authentication
-          setCurrentUser(journeyData.participants[0] || null);
+        }
+        
+        if (user) {
+          setCurrentUser(user);
         }
       }
     };

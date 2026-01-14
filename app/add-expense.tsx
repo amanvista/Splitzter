@@ -16,13 +16,13 @@ import {
 
 import { ThemedText } from '@/components/themed-text';
 import { createExpense, getJourneyById } from '@/lib/database';
+import { getCurrentUser } from '@/lib/user-storage';
 import { Expense, Journey, Person } from '@/types';
-
-const CURRENT_USER_ID = 'user_1';
 
 export default function AddExpenseScreen() {
   const { journeyId } = useLocalSearchParams<{ journeyId: string }>();
   const [journey, setJourney] = useState<Journey | null>(null);
+  const [currentUser, setCurrentUser] = useState<Person | null>(null);
   const [title, setTitle] = useState('');
   const [amount, setAmount] = useState('');
   const [isPaidByMe, setIsPaidByMe] = useState(true);
@@ -32,12 +32,24 @@ export default function AddExpenseScreen() {
   const router = useRouter();
 
   useEffect(() => {
-    if (!journeyId) return;
-    getJourneyById(journeyId).then(j => {
+    const loadData = async () => {
+      if (!journeyId) return;
+      
+      const [user, j] = await Promise.all([
+        getCurrentUser(),
+        getJourneyById(journeyId)
+      ]);
+      
+      if (user) {
+        setCurrentUser(user);
+      }
+      
       if (!j) return;
       setJourney(j);
-      setSelected(j.participants.filter((p: Person) => p.id !== CURRENT_USER_ID).map((p: Person) => p.id));
-    });
+      setSelected(j.participants.filter((p: Person) => p.id !== user?.id).map((p: Person) => p.id));
+    };
+    
+    loadData();
   }, [journeyId]);
 
   const toggleParticipant = (id: string) => {
@@ -68,6 +80,10 @@ export default function AddExpenseScreen() {
       Alert.alert('Missing Info', 'Please select at least one person.');
       return;
     }
+    if (!currentUser) {
+      Alert.alert('Error', 'User not found');
+      return;
+    }
 
     setLoading(true);
     try {
@@ -76,8 +92,8 @@ export default function AddExpenseScreen() {
         journeyId: journeyId!,
         title: title.trim() || (isPaidByMe ? 'Shared Expense' : 'Personal Debt'),
         amount: parseFloat(amount),
-        paidBy: isPaidByMe ? CURRENT_USER_ID : selected[0],
-        splitBetween: isPaidByMe ? [CURRENT_USER_ID, ...selected] : [CURRENT_USER_ID, selected[0]],
+        paidBy: isPaidByMe ? currentUser.id : selected[0],
+        splitBetween: isPaidByMe ? [currentUser.id, ...selected] : [currentUser.id, selected[0]],
         category: 'General',
         date: new Date().toISOString(),
         description: '',
@@ -157,7 +173,7 @@ export default function AddExpenseScreen() {
 
         {/* Participants Grid */}
         <View style={styles.peopleGrid}>
-          {journey.participants.filter(p => p.id !== CURRENT_USER_ID).map(p => {
+          {journey.participants.filter(p => p.id !== currentUser?.id).map(p => {
             const isActive = selected.includes(p.id);
             return (
               <TouchableOpacity 

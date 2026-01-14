@@ -17,6 +17,7 @@ import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { getContacts } from '@/lib/contacts';
 import { createJourney } from '@/lib/database';
+import { getCurrentUser } from '@/lib/user-storage';
 import { Journey, Person } from '@/types';
 
 export default function CreateJourneyScreen() {
@@ -30,8 +31,22 @@ export default function CreateJourneyScreen() {
   const [showContacts, setShowContacts] = useState(false);
   const [loading, setLoading] = useState(false);
   const [fetchingContacts, setFetchingContacts] = useState(false);
+  const [currentUser, setCurrentUser] = useState<Person | null>(null);
   
   const router = useRouter();
+
+  // Load current user
+  useEffect(() => {
+    const loadCurrentUser = async () => {
+      const user = await getCurrentUser();
+      if (user) {
+        setCurrentUser(user);
+        // Automatically add current user to participants
+        setSelectedParticipants([user]);
+      }
+    };
+    loadCurrentUser();
+  }, []);
 
   // Load contacts only when the switch is toggled to improve initial performance
   useEffect(() => {
@@ -81,6 +96,11 @@ export default function CreateJourneyScreen() {
   const toggleParticipant = (person: Person) => {
     const isSelected = selectedParticipants.some(p => p.id === person.id);
     if (isSelected) {
+      // Prevent removing the current user
+      if (currentUser && person.id === currentUser.id) {
+        Alert.alert('Cannot Remove', 'You cannot remove yourself from the journey');
+        return;
+      }
       setSelectedParticipants(selectedParticipants.filter(p => p.id !== person.id));
     } else {
       setSelectedParticipants([...selectedParticipants, person]);

@@ -1,11 +1,12 @@
 import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native';
-import { Stack } from 'expo-router';
+import { Stack, useRouter, useSegments } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import 'react-native-reanimated';
 
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { initDatabase } from '@/lib/database';
+import { getCurrentUser } from '@/lib/user-storage';
 
 export const unstable_settings = {
   anchor: '(tabs)',
@@ -13,14 +14,44 @@ export const unstable_settings = {
 
 export default function RootLayout() {
   const colorScheme = useColorScheme();
+  const router = useRouter();
+  const segments = useSegments();
+  const [isReady, setIsReady] = useState(false);
 
   useEffect(() => {
-    initDatabase().catch(console.error);
-  }, []);
+    const initialize = async () => {
+      try {
+        await initDatabase();
+        const user = await getCurrentUser();
+        
+        // Check if we're in the auth group
+        const inAuthGroup = segments[0] === 'login';
+        
+        if (!user && !inAuthGroup) {
+          // User not logged in, redirect to login
+          router.replace('/login');
+        } else if (user && inAuthGroup) {
+          // User logged in but on login screen, redirect to home
+          router.replace('/(tabs)');
+        }
+      } catch (error) {
+        console.error('Initialization error:', error);
+      } finally {
+        setIsReady(true);
+      }
+    };
+
+    initialize();
+  }, [segments]);
+
+  if (!isReady) {
+    return null;
+  }
 
   return (
     <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
       <Stack>
+        <Stack.Screen name="login" options={{ headerShown: false }} />
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
         <Stack.Screen name="modal" options={{ presentation: 'modal', title: 'Modal' }} />
         <Stack.Screen name="journey/[id]" options={{ headerShown: false }} />
