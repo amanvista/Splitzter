@@ -1,50 +1,93 @@
-# Welcome to your Expo app 👋
+# Splitzter - Journey Expense Tracker
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+A React Native app built with Expo for tracking and splitting expenses during journeys with friends and family.
 
-## Get started
+## Features
 
-1. Install dependencies
+### Journey Management
+- Create journeys with custom names and descriptions
+- Add participants from contacts or manually
+- Edit participant names as needed
+- View journey summaries and statistics
 
+### Expense Tracking
+- Add expenses with titles, amounts, and categories
+- Select who paid for each expense
+- Choose which participants to split the expense between
+- Support for partial splits (not everyone has to be included)
+- Automatic calculation of individual shares
+
+### Smart Balance Calculations
+- Real-time balance tracking for each participant
+- Shows who owes whom and how much
+- Suggests optimal settlements to minimize transactions
+- Individual expense summaries (total paid vs. total share)
+
+### Contact Integration
+- Import participants directly from device contacts
+- Permission-based access to contacts
+- Fallback to manual entry if contacts access is denied
+
+### Statistics & Analytics
+- Overall spending statistics across all journeys
+- Per-journey breakdowns and averages
+- Visual summaries of expenses and participants
+
+## Tech Stack
+
+- **Framework**: Expo (React Native)
+- **Database**: SQLite (expo-sqlite)
+- **Navigation**: Expo Router
+- **Contacts**: expo-contacts
+- **Language**: TypeScript
+
+## Getting Started
+
+1. Install dependencies:
    ```bash
    npm install
    ```
 
-2. Start the app
-
+2. Start the development server:
    ```bash
-   npx expo start
+   npm start
    ```
 
-In the output, you'll find options to open the app in a
+3. Run on your device:
+   - Install Expo Go app on your phone
+   - Scan the QR code from the terminal
+   - Or use iOS Simulator / Android Emulator
 
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
+## Usage
 
-You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
+1. **Create a Journey**: Tap "New Journey" and add participants
+2. **Add Expenses**: In a journey, tap "Add Expense" to record spending
+3. **Track Balances**: View who owes what in the journey details
+4. **Settle Up**: Use suggested settlements to balance accounts
+5. **View Stats**: Check the Statistics tab for spending insights
 
-## Get a fresh project
+## Database Schema
 
-When you're ready, run:
+The app uses SQLite with the following main tables:
+- `journeys` - Journey information
+- `people` - Participant details
+- `expenses` - Expense records
+- `journey_participants` - Journey-participant relationships
+- `expense_splits` - Expense split details
 
-```bash
-npm run reset-project
-```
+## Permissions
 
-This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
+- **Contacts**: Optional, for importing participants from device contacts
+- **Storage**: Required for SQLite database
 
-## Learn more
+## Development
 
-To learn more about developing your project with Expo, look at the following resources:
+The app follows a modular structure:
+- `/types` - TypeScript type definitions
+- `/lib` - Core business logic (database, calculations, contacts)
+- `/app` - Screen components and navigation
+- `/components` - Reusable UI components
 
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
+## License
 
-## Join the community
-
-Join our community of developers creating universal apps.
-
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+MIT License

@@ -1,98 +1,298 @@
-import { Image } from 'expo-image';
-import { Platform, StyleSheet } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
+import { useFocusEffect, useRouter } from 'expo-router';
+import { useCallback, useState } from 'react';
+import { Alert, FlatList, StyleSheet, TouchableOpacity } from 'react-native';
 
-import { HelloWave } from '@/components/hello-wave';
-import ParallaxScrollView from '@/components/parallax-scroll-view';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
-import { Link } from 'expo-router';
+import { Colors } from '@/constants/colors';
+import { getJourneys } from '@/lib/database';
+import { Journey } from '@/types';
 
 export default function HomeScreen() {
-  return (
-    <ParallaxScrollView
-      headerBackgroundColor={{ light: '#A1CEDC', dark: '#1D3D47' }}
-      headerImage={
-        <Image
-          source={require('@/assets/images/partial-react-logo.png')}
-          style={styles.reactLogo}
-        />
-      }>
-      <ThemedView style={styles.titleContainer}>
-        <ThemedText type="title">Welcome!</ThemedText>
-        <HelloWave />
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 1: Try it</ThemedText>
-        <ThemedText>
-          Edit <ThemedText type="defaultSemiBold">app/(tabs)/index.tsx</ThemedText> to see changes.
-          Press{' '}
-          <ThemedText type="defaultSemiBold">
-            {Platform.select({
-              ios: 'cmd + d',
-              android: 'cmd + m',
-              web: 'F12',
-            })}
-          </ThemedText>{' '}
-          to open developer tools.
-        </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <Link href="/modal">
-          <Link.Trigger>
-            <ThemedText type="subtitle">Step 2: Explore</ThemedText>
-          </Link.Trigger>
-          <Link.Preview />
-          <Link.Menu>
-            <Link.MenuAction title="Action" icon="cube" onPress={() => alert('Action pressed')} />
-            <Link.MenuAction
-              title="Share"
-              icon="square.and.arrow.up"
-              onPress={() => alert('Share pressed')}
-            />
-            <Link.Menu title="More" icon="ellipsis">
-              <Link.MenuAction
-                title="Delete"
-                icon="trash"
-                destructive
-                onPress={() => alert('Delete pressed')}
-              />
-            </Link.Menu>
-          </Link.Menu>
-        </Link>
+  const [journeys, setJourneys] = useState<Journey[]>([]);
+  const [loading, setLoading] = useState(true);
+  const router = useRouter();
 
-        <ThemedText>
-          {`Tap the Explore tab to learn more about what's included in this starter app.`}
-        </ThemedText>
+  const loadJourneys = async () => {
+    try {
+      setLoading(true);
+      const loadedJourneys = await getJourneys();
+      setJourneys(loadedJourneys);
+    } catch (error) {
+      Alert.alert('Error', 'Failed to load journeys');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useFocusEffect(
+    useCallback(() => {
+      loadJourneys();
+    }, [])
+  );
+
+  const renderJourney = ({ item }: { item: Journey }) => (
+    <TouchableOpacity
+      style={styles.journeyCard}
+      onPress={() => router.push(`/journey/${item.id}`)}
+      activeOpacity={0.7}
+    >
+      <ThemedView style={styles.journeyContent}>
+        <ThemedView style={styles.journeyHeader}>
+          <ThemedView style={styles.journeyIcon}>
+            <ThemedText style={styles.journeyIconText}>
+              {item.name.charAt(0).toUpperCase()}
+            </ThemedText>
+          </ThemedView>
+          <ThemedView style={styles.journeyInfo}>
+            <ThemedText style={styles.journeyTitle}>{item.name}</ThemedText>
+            {item.description && (
+              <ThemedText style={styles.journeyDescription}>{item.description}</ThemedText>
+            )}
+          </ThemedView>
+        </ThemedView>
+        
+        <ThemedView style={styles.journeyStats}>
+          <ThemedView style={styles.statItem}>
+            <ThemedText style={styles.statNumber}>{item.participants.length}</ThemedText>
+            <ThemedText style={styles.statLabel}>Members</ThemedText>
+          </ThemedView>
+          <ThemedView style={styles.statDivider} />
+          <ThemedView style={styles.statItem}>
+            <ThemedText style={styles.statDate}>
+              {new Date(item.createdAt).toLocaleDateString('en-US', { 
+                month: 'short', 
+                day: 'numeric' 
+              })}
+            </ThemedText>
+            <ThemedText style={styles.statLabel}>Created</ThemedText>
+          </ThemedView>
+        </ThemedView>
       </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 3: Get a fresh start</ThemedText>
-        <ThemedText>
-          {`When you're ready, run `}
-          <ThemedText type="defaultSemiBold">npm run reset-project</ThemedText> to get a fresh{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> directory. This will move the current{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> to{' '}
-          <ThemedText type="defaultSemiBold">app-example</ThemedText>.
-        </ThemedText>
+    </TouchableOpacity>
+  );
+
+  if (loading) {
+    return (
+      <ThemedView style={styles.container}>
+        <LinearGradient
+          colors={[Colors.gradientStart, Colors.gradientEnd]}
+          style={styles.header}
+        >
+          <ThemedText style={styles.headerTitle}>Splitzter</ThemedText>
+          <ThemedText style={styles.headerSubtitle}>Loading your journeys...</ThemedText>
+        </LinearGradient>
       </ThemedView>
-    </ParallaxScrollView>
+    );
+  }
+
+  return (
+    <ThemedView style={styles.container}>
+      <LinearGradient
+        colors={[Colors.gradientStart, Colors.gradientEnd]}
+        style={styles.header}
+      >
+        <ThemedText style={styles.headerTitle}>Splitzter</ThemedText>
+        <ThemedText style={styles.headerSubtitle}>Track & Split Expenses</ThemedText>
+        
+        <TouchableOpacity
+          style={styles.addButton}
+          onPress={() => router.push('/create-journey')}
+          activeOpacity={0.8}
+        >
+          <ThemedText style={styles.addButtonIcon}>+</ThemedText>
+          <ThemedText style={styles.addButtonText}>New Journey</ThemedText>
+        </TouchableOpacity>
+      </LinearGradient>
+
+      <ThemedView style={styles.content}>
+        {journeys.length === 0 ? (
+          <ThemedView style={styles.emptyState}>
+            <ThemedView style={styles.emptyIcon}>
+              <ThemedText style={styles.emptyIconText}>🎒</ThemedText>
+            </ThemedView>
+            <ThemedText style={styles.emptyTitle}>No journeys yet</ThemedText>
+            <ThemedText style={styles.emptySubtext}>
+              Start your first journey to track and split expenses with friends
+            </ThemedText>
+          </ThemedView>
+        ) : (
+          <FlatList
+            data={journeys}
+            renderItem={renderJourney}
+            keyExtractor={(item) => item.id}
+            contentContainerStyle={styles.list}
+            showsVerticalScrollIndicator={false}
+          />
+        )}
+      </ThemedView>
+    </ThemedView>
   );
 }
 
 const styles = StyleSheet.create({
-  titleContainer: {
+  container: {
+    flex: 1,
+    backgroundColor: Colors.background,
+  },
+  header: {
+    paddingTop: 60,
+    paddingBottom: 30,
+    paddingHorizontal: 24,
+    borderBottomLeftRadius: 24,
+    borderBottomRightRadius: 24,
+  },
+  headerTitle: {
+    fontSize: 32,
+    fontWeight: 'bold',
+    color: Colors.textInverse,
+    marginBottom: 4,
+  },
+  headerSubtitle: {
+    fontSize: 16,
+    color: Colors.textInverse,
+    opacity: 0.9,
+    marginBottom: 24,
+  },
+  addButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    borderRadius: 25,
+    alignSelf: 'flex-start',
   },
-  stepContainer: {
-    gap: 8,
-    marginBottom: 8,
+  addButtonIcon: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: Colors.textInverse,
+    marginRight: 8,
   },
-  reactLogo: {
-    height: 178,
-    width: 290,
-    bottom: 0,
-    left: 0,
-    position: 'absolute',
+  addButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: Colors.textInverse,
+  },
+  content: {
+    flex: 1,
+    paddingTop: 20,
+  },
+  list: {
+    paddingHorizontal: 20,
+    paddingBottom: 20,
+  },
+  journeyCard: {
+    marginBottom: 16,
+    borderRadius: 16,
+    backgroundColor: Colors.surface,
+    shadowColor: Colors.shadow,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 12,
+    elevation: 4,
+  },
+  journeyContent: {
+    padding: 20,
+  },
+  journeyHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  journeyIcon: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: Colors.primaryLight,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 16,
+  },
+  journeyIconText: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: Colors.textInverse,
+  },
+  journeyInfo: {
+    flex: 1,
+  },
+  journeyTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: Colors.text,
+    marginBottom: 4,
+  },
+  journeyDescription: {
+    fontSize: 14,
+    color: Colors.textSecondary,
+    lineHeight: 20,
+  },
+  journeyStats: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingTop: 16,
+    borderTopWidth: 1,
+    borderTopColor: Colors.borderLight,
+  },
+  statItem: {
+    flex: 1,
+    alignItems: 'center',
+  },
+  statNumber: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: Colors.primary,
+    marginBottom: 2,
+  },
+  statDate: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: Colors.primary,
+    marginBottom: 2,
+  },
+  statLabel: {
+    fontSize: 12,
+    color: Colors.textLight,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  statDivider: {
+    width: 1,
+    height: 32,
+    backgroundColor: Colors.borderLight,
+    marginHorizontal: 16,
+  },
+  emptyState: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 40,
+  },
+  emptyIcon: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: Colors.surfaceSecondary,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 24,
+  },
+  emptyIconText: {
+    fontSize: 32,
+  },
+  emptyTitle: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: Colors.text,
+    marginBottom: 12,
+    textAlign: 'center',
+  },
+  emptySubtext: {
+    fontSize: 16,
+    color: Colors.textSecondary,
+    textAlign: 'center',
+    lineHeight: 24,
   },
 });

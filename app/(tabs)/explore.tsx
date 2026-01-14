@@ -1,112 +1,223 @@
-import { Image } from 'expo-image';
-import { Platform, StyleSheet } from 'react-native';
+import { useFocusEffect } from 'expo-router';
+import { useCallback, useState } from 'react';
+import { FlatList, ScrollView, StyleSheet } from 'react-native';
 
-import { Collapsible } from '@/components/ui/collapsible';
-import { ExternalLink } from '@/components/external-link';
-import ParallaxScrollView from '@/components/parallax-scroll-view';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
-import { IconSymbol } from '@/components/ui/icon-symbol';
-import { Fonts } from '@/constants/theme';
+import { getJourneyExpenses, getJourneys } from '@/lib/database';
+import { Journey } from '@/types';
 
-export default function TabTwoScreen() {
-  return (
-    <ParallaxScrollView
-      headerBackgroundColor={{ light: '#D0D0D0', dark: '#353636' }}
-      headerImage={
-        <IconSymbol
-          size={310}
-          color="#808080"
-          name="chevron.left.forwardslash.chevron.right"
-          style={styles.headerImage}
-        />
-      }>
-      <ThemedView style={styles.titleContainer}>
-        <ThemedText
-          type="title"
-          style={{
-            fontFamily: Fonts.rounded,
-          }}>
-          Explore
-        </ThemedText>
+interface JourneyStats {
+  journey: Journey;
+  totalExpenses: number;
+  expenseCount: number;
+  avgExpensePerPerson: number;
+}
+
+export default function ExploreScreen() {
+  const [journeyStats, setJourneyStats] = useState<JourneyStats[]>([]);
+  const [overallStats, setOverallStats] = useState({
+    totalJourneys: 0,
+    totalExpenses: 0,
+    totalAmount: 0,
+    avgExpensePerJourney: 0,
+  });
+
+  const loadStatistics = async () => {
+    try {
+      const journeys = await getJourneys();
+      const stats: JourneyStats[] = [];
+      let totalExpenses = 0;
+      let totalAmount = 0;
+
+      for (const journey of journeys) {
+        const expenses = await getJourneyExpenses(journey.id);
+        const journeyTotal = expenses.reduce((sum, expense) => sum + expense.amount, 0);
+        const avgPerPerson = journey.participants.length > 0 ? journeyTotal / journey.participants.length : 0;
+
+        stats.push({
+          journey,
+          totalExpenses: journeyTotal,
+          expenseCount: expenses.length,
+          avgExpensePerPerson: avgPerPerson,
+        });
+
+        totalExpenses += expenses.length;
+        totalAmount += journeyTotal;
+      }
+
+      setJourneyStats(stats.sort((a, b) => b.totalExpenses - a.totalExpenses));
+      setOverallStats({
+        totalJourneys: journeys.length,
+        totalExpenses,
+        totalAmount,
+        avgExpensePerJourney: journeys.length > 0 ? totalAmount / journeys.length : 0,
+      });
+    } catch (error) {
+      console.error('Failed to load statistics:', error);
+    }
+  };
+
+  useFocusEffect(
+    useCallback(() => {
+      loadStatistics();
+    }, [])
+  );
+
+  const renderJourneyStat = ({ item }: { item: JourneyStats }) => (
+    <ThemedView style={styles.statCard}>
+      <ThemedText style={styles.journeyName}>{item.journey.name}</ThemedText>
+      <ThemedView style={styles.statRow}>
+        <ThemedText style={styles.statLabel}>Total Expenses:</ThemedText>
+        <ThemedText style={styles.statValue}>${item.totalExpenses.toFixed(2)}</ThemedText>
       </ThemedView>
-      <ThemedText>This app includes example code to help you get started.</ThemedText>
-      <Collapsible title="File-based routing">
-        <ThemedText>
-          This app has two screens:{' '}
-          <ThemedText type="defaultSemiBold">app/(tabs)/index.tsx</ThemedText> and{' '}
-          <ThemedText type="defaultSemiBold">app/(tabs)/explore.tsx</ThemedText>
-        </ThemedText>
-        <ThemedText>
-          The layout file in <ThemedText type="defaultSemiBold">app/(tabs)/_layout.tsx</ThemedText>{' '}
-          sets up the tab navigator.
-        </ThemedText>
-        <ExternalLink href="https://docs.expo.dev/router/introduction">
-          <ThemedText type="link">Learn more</ThemedText>
-        </ExternalLink>
-      </Collapsible>
-      <Collapsible title="Android, iOS, and web support">
-        <ThemedText>
-          You can open this project on Android, iOS, and the web. To open the web version, press{' '}
-          <ThemedText type="defaultSemiBold">w</ThemedText> in the terminal running this project.
-        </ThemedText>
-      </Collapsible>
-      <Collapsible title="Images">
-        <ThemedText>
-          For static images, you can use the <ThemedText type="defaultSemiBold">@2x</ThemedText> and{' '}
-          <ThemedText type="defaultSemiBold">@3x</ThemedText> suffixes to provide files for
-          different screen densities
-        </ThemedText>
-        <Image
-          source={require('@/assets/images/react-logo.png')}
-          style={{ width: 100, height: 100, alignSelf: 'center' }}
-        />
-        <ExternalLink href="https://reactnative.dev/docs/images">
-          <ThemedText type="link">Learn more</ThemedText>
-        </ExternalLink>
-      </Collapsible>
-      <Collapsible title="Light and dark mode components">
-        <ThemedText>
-          This template has light and dark mode support. The{' '}
-          <ThemedText type="defaultSemiBold">useColorScheme()</ThemedText> hook lets you inspect
-          what the user&apos;s current color scheme is, and so you can adjust UI colors accordingly.
-        </ThemedText>
-        <ExternalLink href="https://docs.expo.dev/develop/user-interface/color-themes/">
-          <ThemedText type="link">Learn more</ThemedText>
-        </ExternalLink>
-      </Collapsible>
-      <Collapsible title="Animations">
-        <ThemedText>
-          This template includes an example of an animated component. The{' '}
-          <ThemedText type="defaultSemiBold">components/HelloWave.tsx</ThemedText> component uses
-          the powerful{' '}
-          <ThemedText type="defaultSemiBold" style={{ fontFamily: Fonts.mono }}>
-            react-native-reanimated
-          </ThemedText>{' '}
-          library to create a waving hand animation.
-        </ThemedText>
-        {Platform.select({
-          ios: (
-            <ThemedText>
-              The <ThemedText type="defaultSemiBold">components/ParallaxScrollView.tsx</ThemedText>{' '}
-              component provides a parallax effect for the header image.
+      <ThemedView style={styles.statRow}>
+        <ThemedText style={styles.statLabel}>Number of Expenses:</ThemedText>
+        <ThemedText style={styles.statValue}>{item.expenseCount}</ThemedText>
+      </ThemedView>
+      <ThemedView style={styles.statRow}>
+        <ThemedText style={styles.statLabel}>Avg per Person:</ThemedText>
+        <ThemedText style={styles.statValue}>${item.avgExpensePerPerson.toFixed(2)}</ThemedText>
+      </ThemedView>
+      <ThemedView style={styles.statRow}>
+        <ThemedText style={styles.statLabel}>Participants:</ThemedText>
+        <ThemedText style={styles.statValue}>{item.journey.participants.length}</ThemedText>
+      </ThemedView>
+    </ThemedView>
+  );
+
+  return (
+    <ScrollView style={styles.container}>
+      <ThemedText style={styles.title}>Statistics</ThemedText>
+
+      <ThemedView style={styles.overallSection}>
+        <ThemedText style={styles.sectionTitle}>Overall Summary</ThemedText>
+        <ThemedView style={styles.overallCard}>
+          <ThemedView style={styles.overallRow}>
+            <ThemedView style={styles.overallStat}>
+              <ThemedText style={styles.overallNumber}>{overallStats.totalJourneys}</ThemedText>
+              <ThemedText style={styles.overallLabel}>Journeys</ThemedText>
+            </ThemedView>
+            <ThemedView style={styles.overallStat}>
+              <ThemedText style={styles.overallNumber}>{overallStats.totalExpenses}</ThemedText>
+              <ThemedText style={styles.overallLabel}>Expenses</ThemedText>
+            </ThemedView>
+          </ThemedView>
+          <ThemedView style={styles.overallRow}>
+            <ThemedView style={styles.overallStat}>
+              <ThemedText style={styles.overallNumber}>${overallStats.totalAmount.toFixed(0)}</ThemedText>
+              <ThemedText style={styles.overallLabel}>Total Amount</ThemedText>
+            </ThemedView>
+            <ThemedView style={styles.overallStat}>
+              <ThemedText style={styles.overallNumber}>${overallStats.avgExpensePerJourney.toFixed(0)}</ThemedText>
+              <ThemedText style={styles.overallLabel}>Avg per Journey</ThemedText>
+            </ThemedView>
+          </ThemedView>
+        </ThemedView>
+      </ThemedView>
+
+      <ThemedView style={styles.journeySection}>
+        <ThemedText style={styles.sectionTitle}>Journey Breakdown</ThemedText>
+        {journeyStats.length === 0 ? (
+          <ThemedView style={styles.emptyState}>
+            <ThemedText style={styles.emptyText}>No journey data yet</ThemedText>
+            <ThemedText style={styles.emptySubtext}>
+              Create journeys and add expenses to see statistics
             </ThemedText>
-          ),
-        })}
-      </Collapsible>
-    </ParallaxScrollView>
+          </ThemedView>
+        ) : (
+          <FlatList
+            data={journeyStats}
+            renderItem={renderJourneyStat}
+            keyExtractor={(item) => item.journey.id}
+            scrollEnabled={false}
+          />
+        )}
+      </ThemedView>
+    </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
-  headerImage: {
-    color: '#808080',
-    bottom: -90,
-    left: -35,
-    position: 'absolute',
+  container: {
+    flex: 1,
+    padding: 16,
   },
-  titleContainer: {
+  title: {
+    fontSize: 28,
+    fontWeight: 'bold',
+    marginBottom: 24,
+  },
+  overallSection: {
+    marginBottom: 32,
+  },
+  sectionTitle: {
+    fontSize: 20,
+    fontWeight: '600',
+    marginBottom: 16,
+  },
+  overallCard: {
+    backgroundColor: '#f8f9fa',
+    padding: 20,
+    borderRadius: 12,
+  },
+  overallRow: {
     flexDirection: 'row',
-    gap: 8,
+    justifyContent: 'space-around',
+    marginBottom: 16,
+  },
+  overallStat: {
+    alignItems: 'center',
+  },
+  overallNumber: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: '#007AFF',
+    marginBottom: 4,
+  },
+  overallLabel: {
+    fontSize: 14,
+    opacity: 0.7,
+  },
+  journeySection: {
+    marginBottom: 24,
+  },
+  statCard: {
+    backgroundColor: '#f8f9fa',
+    padding: 16,
+    borderRadius: 8,
+    marginBottom: 12,
+  },
+  journeyName: {
+    fontSize: 16,
+    fontWeight: '600',
+    marginBottom: 12,
+    color: '#007AFF',
+  },
+  statRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 6,
+  },
+  statLabel: {
+    fontSize: 14,
+  },
+  statValue: {
+    fontSize: 14,
+    fontWeight: '500',
+  },
+  emptyState: {
+    alignItems: 'center',
+    padding: 32,
+  },
+  emptyText: {
+    fontSize: 16,
+    fontWeight: '600',
+    marginBottom: 8,
+  },
+  emptySubtext: {
+    fontSize: 14,
+    opacity: 0.7,
+    textAlign: 'center',
   },
 });
