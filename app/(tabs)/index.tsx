@@ -1,35 +1,26 @@
 import { LinearGradient } from 'expo-linear-gradient';
 import { useFocusEffect, useRouter } from 'expo-router';
-import { useCallback, useState } from 'react';
+import { useCallback } from 'react';
 import { Alert, FlatList, StyleSheet, TouchableOpacity } from 'react-native';
 
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { Colors } from '@/constants/colors';
-import { getJourneys } from '@/lib/database';
+import { useAppDispatch, useAppSelector } from '@/store';
+import { loadJourneys } from '@/store/thunks';
 import { Journey } from '@/types';
 
 export default function HomeScreen() {
-  const [journeys, setJourneys] = useState<Journey[]>([]);
-  const [loading, setLoading] = useState(true);
+  const dispatch = useAppDispatch();
+  const { journeys, isLoading: loading } = useAppSelector((state) => state.journey);
   const router = useRouter();
-
-  const loadJourneys = async () => {
-    try {
-      setLoading(true);
-      const loadedJourneys = await getJourneys();
-      setJourneys(loadedJourneys);
-    } catch (error) {
-      Alert.alert('Error', 'Failed to load journeys');
-    } finally {
-      setLoading(false);
-    }
-  };
 
   useFocusEffect(
     useCallback(() => {
-      loadJourneys();
-    }, [])
+      dispatch(loadJourneys()).catch(() => {
+        Alert.alert('Error', 'Failed to load journeys');
+      });
+    }, [dispatch])
   );
 
   const renderJourney = ({ item }: { item: Journey }) => (

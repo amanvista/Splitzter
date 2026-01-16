@@ -13,42 +13,31 @@ import {
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { Colors } from '@/constants/colors';
-import { createExpense, getJourneyById } from '@/lib/database';
 import { getExampleText, ParsedExpense, parseExpenseText } from '@/lib/text-parser';
-import { getCurrentUser } from '@/lib/user-storage';
-import { Expense, Journey, Person } from '@/types';
+import { useAppDispatch, useAppSelector } from '@/store';
+import { createExpenseThunk } from '@/store/thunks';
+import { Expense } from '@/types';
 
 export default function ImportExpensesScreen() {
   const { journeyId } = useLocalSearchParams<{ journeyId: string }>();
-  const [journey, setJourney] = useState<Journey | null>(null);
+  const dispatch = useAppDispatch();
+  const journey = useAppSelector((state) => state.journey.currentJourney);
+  const currentUser = useAppSelector((state) => state.user.currentUser);
+  const [selectedUser, setSelectedUser] = useState(currentUser); // Local state for "I/me" reference
   const [inputText, setInputText] = useState('');
   const [parsedExpenses, setParsedExpenses] = useState<ParsedExpense[]>([]);
   const [errors, setErrors] = useState<string[]>([]);
-  const [currentUser, setCurrentUser] = useState<Person | null>(null);
   const [loading, setLoading] = useState(false);
   const [showExample, setShowExample] = useState(true);
   
   const router = useRouter();
 
+  // Update selected user when current user changes
   useEffect(() => {
-    const loadJourney = async () => {
-      if (journeyId) {
-        const [journeyData, user] = await Promise.all([
-          getJourneyById(journeyId),
-          getCurrentUser()
-        ]);
-        
-        if (journeyData) {
-          setJourney(journeyData);
-        }
-        
-        if (user) {
-          setCurrentUser(user);
-        }
-      }
-    };
-    loadJourney();
-  }, [journeyId]);
+    if (currentUser && !selectedUser) {
+      setSelectedUser(currentUser);
+    }
+  }, [currentUser]);
 
   const parseText = () => {
     if (!journey || !inputText.trim()) {
@@ -59,12 +48,12 @@ export default function ImportExpensesScreen() {
 
     const result = parseExpenseText(inputText, journey.participants);
     
-    // Replace 'current_user' with actual current user ID
+    // Replace 'current_user' with actual selected user ID
     const processedExpenses = result.expenses.map(expense => ({
       ...expense,
-      paidBy: expense.paidBy === 'current_user' ? (currentUser?.id || '') : expense.paidBy,
+      paidBy: expense.paidBy === 'current_user' ? (selectedUser?.id || '') : expense.paidBy,
       splitBetween: expense.splitBetween.map(id => 
-        id === 'current_user' ? (currentUser?.id || '') : id
+        id === 'current_user' ? (selectedUser?.id || '') : id
       ).filter(id => id !== ''),
     }));
 
@@ -113,7 +102,7 @@ export default function ImportExpensesScreen() {
           description: parsedExpense.description || '',
         };
 
-        await createExpense(expense);
+        await dispatch(createExpenseThunk(expense)).unwrap();
       }
 
       Alert.alert(
@@ -216,7 +205,7 @@ export default function ImportExpensesScreen() {
         {currentUser && (
           <ThemedView style={styles.userSection}>
             <ThemedText style={styles.userLabel}>
-              "I" and "me" refer to: {currentUser.name}
+              "I" and "me" refer to: {selectedUser?.name || 'Select a user'}
             </ThemedText>
             <FlatList
               data={journey.participants}
@@ -226,13 +215,13 @@ export default function ImportExpensesScreen() {
                 <TouchableOpacity
                   style={[
                     styles.userChip,
-                    currentUser.id === item.id && styles.selectedUserChip
+                    selectedUser?.id === item.id && styles.selectedUserChip
                   ]}
-                  onPress={() => setCurrentUser(item)}
+                  onPress={() => setSelectedUser(item)}
                 >
                   <ThemedText style={[
                     styles.userChipText,
-                    currentUser.id === item.id && styles.selectedUserChipText
+                    selectedUser?.id === item.id && styles.selectedUserChipText
                   ]}>
                     {item.name}
                   </ThemedText>

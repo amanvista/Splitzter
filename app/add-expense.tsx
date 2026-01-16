@@ -15,14 +15,15 @@ import {
 } from 'react-native';
 
 import { ThemedText } from '@/components/themed-text';
-import { createExpense, getJourneyById } from '@/lib/database';
-import { getCurrentUser } from '@/lib/user-storage';
-import { Expense, Journey, Person } from '@/types';
+import { useAppDispatch, useAppSelector } from '@/store';
+import { createExpenseThunk } from '@/store/thunks';
+import { Expense, Person } from '@/types';
 
 export default function AddExpenseScreen() {
   const { journeyId } = useLocalSearchParams<{ journeyId: string }>();
-  const [journey, setJourney] = useState<Journey | null>(null);
-  const [currentUser, setCurrentUser] = useState<Person | null>(null);
+  const dispatch = useAppDispatch();
+  const journey = useAppSelector((state) => state.journey.currentJourney);
+  const currentUser = useAppSelector((state) => state.user.currentUser);
   const [title, setTitle] = useState('');
   const [amount, setAmount] = useState('');
   const [isPaidByMe, setIsPaidByMe] = useState(true);
@@ -32,25 +33,11 @@ export default function AddExpenseScreen() {
   const router = useRouter();
 
   useEffect(() => {
-    const loadData = async () => {
-      if (!journeyId) return;
-      
-      const [user, j] = await Promise.all([
-        getCurrentUser(),
-        getJourneyById(journeyId)
-      ]);
-      
-      if (user) {
-        setCurrentUser(user);
-      }
-      
-      if (!j) return;
-      setJourney(j);
-      setSelected(j.participants.filter((p: Person) => p.id !== user?.id).map((p: Person) => p.id));
-    };
-    
-    loadData();
-  }, [journeyId]);
+    if (journey && currentUser) {
+      // Select all participants except current user by default
+      setSelected(journey.participants.filter((p: Person) => p.id !== currentUser.id).map((p: Person) => p.id));
+    }
+  }, [journey, currentUser]);
 
   const toggleParticipant = (id: string) => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -92,14 +79,14 @@ export default function AddExpenseScreen() {
         journeyId: journeyId!,
         title: title.trim() || (isPaidByMe ? 'Shared Expense' : 'Personal Debt'),
         amount: parseFloat(amount),
-        paidBy: isPaidByMe ? currentUser.id : selected[0],
-        splitBetween: isPaidByMe ? [currentUser.id, ...selected] : [currentUser.id, selected[0]],
+        paidBy: isPaidByMe ? currentUser!.id : selected[0],
+        splitBetween: isPaidByMe ? [currentUser!.id, ...selected] : [currentUser!.id, selected[0]],
         category: 'General',
         date: new Date().toISOString(),
         description: '',
       };
 
-      await createExpense(expense);
+      await dispatch(createExpenseThunk(expense)).unwrap();
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       router.back();
     } catch (error) {

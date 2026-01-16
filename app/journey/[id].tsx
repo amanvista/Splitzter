@@ -1,7 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
-import { useCallback, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import {
   Alert,
   ScrollView,
@@ -14,12 +14,9 @@ import {
 import { ShareModal } from '@/components/share-modal';
 import { ThemedText } from '@/components/themed-text';
 import { calculateJourneyBalance } from '@/lib/calculations';
-import {
-  deleteExpense,
-  getJourneyById,
-  getJourneyExpenses
-} from '@/lib/database';
-import { Expense, Journey, JourneyBalance, Person, Settlement } from '@/types';
+import { useAppDispatch, useAppSelector } from '@/store';
+import { deleteExpenseThunk, loadExpensesForJourney } from '@/store/thunks';
+import { Expense, Person, Settlement } from '@/types';
 
 // Professional Slate/Indigo Palette
 const THEME = {
@@ -36,32 +33,30 @@ const THEME = {
 
 export default function JourneyDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
-  const [journey, setJourney] = useState<Journey | null>(null);
-  const [expenses, setExpenses] = useState<Expense[]>([]);
-  const [balance, setBalance] = useState<JourneyBalance | null>(null);
+  const dispatch = useAppDispatch();
+  const journey = useAppSelector((state) => state.journey.currentJourney);
+  const expenses = useAppSelector((state) => 
+    id ? state.expense.expenses[id] || [] : []
+  );
   const [showShareModal, setShowShareModal] = useState(false);
   const router = useRouter();
 
-  const loadJourneyData = async () => {
-    if (!id) return;
-    try {
-      const journeyData = await getJourneyById(id);
-      if (!journeyData) {
-        Alert.alert('Error', 'Journey not found');
-        router.back();
-        return;
-      }
-      const expenseData = await getJourneyExpenses(id);
-      const balanceData = calculateJourneyBalance(expenseData, journeyData.participants);
-      setJourney(journeyData);
-      setExpenses(expenseData);
-      setBalance(balanceData);
-    } catch (error) {
-      Alert.alert('Error', 'Failed to load journey data');
-    }
-  };
+  // Calculate balance whenever expenses or journey changes
+  const balance = useMemo(() => {
+    if (!journey || !expenses) return null;
+    return calculateJourneyBalance(expenses, journey.participants);
+  }, [expenses, journey]);
 
-  useFocusEffect(useCallback(() => { loadJourneyData(); }, [id]));
+  useFocusEffect(
+    useCallback(() => {
+      if (!id) return;
+      
+      // Load journey and expenses
+      dispatch(loadExpensesForJourney(id)).catch(() => {
+        Alert.alert('Error', 'Failed to load journey data');
+      });
+    }, [id, dispatch])
+  );
 
   const getPersonName = (personId: string) => 
     journey?.participants.find(p => p.id === personId)?.name || 'Unknown';
@@ -76,9 +71,9 @@ export default function JourneyDetailScreen() {
           text: 'Delete', 
           style: 'destructive', 
           onPress: async () => {
+            if (!id) return;
             try {
-              await deleteExpense(expense.id);
-              loadJourneyData(); // Refresh list and totals
+              await dispatch(deleteExpenseThunk({ journeyId: id, expenseId: expense.id })).unwrap();
             } catch (error) {
               Alert.alert('Error', 'Could not delete expense');
             }

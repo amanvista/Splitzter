@@ -16,11 +16,13 @@ import {
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { getContacts } from '@/lib/contacts';
-import { createJourney } from '@/lib/database';
-import { getCurrentUser } from '@/lib/user-storage';
+import { useAppDispatch, useAppSelector } from '@/store';
+import { createJourney } from '@/store/thunks';
 import { Journey, Person } from '@/types';
 
 export default function CreateJourneyScreen() {
+  const dispatch = useAppDispatch();
+  const currentUser = useAppSelector((state) => state.user.currentUser);
   const [journeyName, setJourneyName] = useState('');
   const [journeyDescription, setJourneyDescription] = useState('');
   const [contacts, setContacts] = useState<Person[]>([]);
@@ -31,22 +33,15 @@ export default function CreateJourneyScreen() {
   const [showContacts, setShowContacts] = useState(false);
   const [loading, setLoading] = useState(false);
   const [fetchingContacts, setFetchingContacts] = useState(false);
-  const [currentUser, setCurrentUser] = useState<Person | null>(null);
   
   const router = useRouter();
 
-  // Load current user
+  // Automatically add current user to participants
   useEffect(() => {
-    const loadCurrentUser = async () => {
-      const user = await getCurrentUser();
-      if (user) {
-        setCurrentUser(user);
-        // Automatically add current user to participants
-        setSelectedParticipants([user]);
-      }
-    };
-    loadCurrentUser();
-  }, []);
+    if (currentUser && selectedParticipants.length === 0) {
+      setSelectedParticipants([currentUser]);
+    }
+  }, [currentUser]);
 
   // Load contacts only when the switch is toggled to improve initial performance
   useEffect(() => {
@@ -126,7 +121,7 @@ export default function CreateJourneyScreen() {
         createdAt: new Date().toISOString(),
         participants: selectedParticipants,
       };
-      await createJourney(journey);
+      await dispatch(createJourney(journey)).unwrap();
       router.back();
     } catch (error) {
       Alert.alert('Error', 'Failed to create journey');

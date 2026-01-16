@@ -61,8 +61,14 @@ export const createJourney = createAsyncThunk('journey/create', async (journey: 
 // Expense thunks
 export const loadExpensesForJourney = createAsyncThunk(
   'expense/loadForJourney',
-  async (journeyId: string) => {
+  async (journeyId: string, { dispatch }) => {
+    // Load both journey and expenses
+    const journey = await dbGetJourneyById(journeyId);
     const expenses = await dbGetJourneyExpenses(journeyId);
+    
+    // Update current journey in journey slice
+    dispatch({ type: 'journey/setCurrentJourney', payload: journey });
+    
     return { journeyId, expenses };
   }
 );

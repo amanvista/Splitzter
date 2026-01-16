@@ -13,8 +13,9 @@ import {
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { Colors } from '@/constants/colors';
-import { deleteExpense, updateExpense } from '@/lib/database';
-import { Expense, Journey, Person } from '@/types';
+import { useAppDispatch, useAppSelector } from '@/store';
+import { deleteExpenseThunk, updateExpenseThunk } from '@/store/thunks';
+import { Expense, Person } from '@/types';
 
 const EXPENSE_CATEGORIES = [
   { name: 'Food & Dining', emoji: '🍽️' },
@@ -27,7 +28,9 @@ const EXPENSE_CATEGORIES = [
 
 export default function EditExpenseScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
-  const [journey, setJourney] = useState<Journey | null>(null);
+  const dispatch = useAppDispatch();
+  const journey = useAppSelector((state) => state.journey.currentJourney);
+  const allExpenses = useAppSelector((state) => state.expense.expenses);
   const [expense, setExpense] = useState<Expense | null>(null);
   const [title, setTitle] = useState('');
   const [amount, setAmount] = useState('');
@@ -41,36 +44,37 @@ export default function EditExpenseScreen() {
 
   useEffect(() => {
     loadExpenseData();
-  }, [id]);
+  }, [id, allExpenses, journey]);
 
   const loadExpenseData = async () => {
     if (!id) return;
 
     try {
-      // Find the expense by ID across all journeys
-      // This is a simplified approach - in a real app you might want to pass journeyId as well
-      const journeys = await import('@/lib/database').then(db => db.getJourneys());
+      // Find the expense in Redux state
       let foundExpense: Expense | null = null;
-      let foundJourney: Journey | null = null;
 
-      for (const j of journeys) {
-        const expenses = await import('@/lib/database').then(db => db.getJourneyExpenses(j.id));
+      for (const journeyId in allExpenses) {
+        const expenses = allExpenses[journeyId];
         const exp = expenses.find(e => e.id === id);
         if (exp) {
           foundExpense = exp;
-          foundJourney = j;
           break;
         }
       }
 
-      if (!foundExpense || !foundJourney) {
+      if (!foundExpense) {
         Alert.alert('Error', 'Expense not found');
         router.back();
         return;
       }
 
+      if (!journey) {
+        Alert.alert('Error', 'Journey not found');
+        router.back();
+        return;
+      }
+
       setExpense(foundExpense);
-      setJourney(foundJourney);
       setTitle(foundExpense.title);
       setAmount(foundExpense.amount.toString());
       setDescription(foundExpense.description || '');
@@ -101,7 +105,7 @@ export default function EditExpenseScreen() {
     setSplitBetween([]);
   };
 
-  const updateExpenseData = () => {
+  const updateExpenseData = async () => {
     if (!expense || !journey) return;
 
     if (!title.trim()) {
@@ -138,7 +142,7 @@ export default function EditExpenseScreen() {
         description: description.trim(),
       };
 
-      updateExpense(updatedExpense);
+      await dispatch(updateExpenseThunk(updatedExpense)).unwrap();
       router.back();
     } catch (error) {
       Alert.alert('Error', 'Failed to update expense');
@@ -148,7 +152,7 @@ export default function EditExpenseScreen() {
   };
 
   const deleteExpenseData = () => {
-    if (!expense) return;
+    if (!expense || !journey) return;
 
     Alert.alert(
       'Delete Expense',
@@ -158,9 +162,9 @@ export default function EditExpenseScreen() {
         {
           text: 'Delete',
           style: 'destructive',
-          onPress: () => {
+          onPress: async () => {
             try {
-              deleteExpense(expense.id);
+              await dispatch(deleteExpenseThunk({ journeyId: journey.id, expenseId: expense.id })).unwrap();
               router.back();
             } catch (error) {
               Alert.alert('Error', 'Failed to delete expense');
