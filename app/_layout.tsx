@@ -3,16 +3,18 @@ import { Stack, useRouter, useSegments } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect, useState } from 'react';
 import 'react-native-reanimated';
+import { Provider } from 'react-redux';
 
-import { useColorScheme } from '@/hooks/use-color-scheme';
-import { initDatabase } from '@/lib/database';
-import { getCurrentUser } from '@/lib/user-storage';
+import { initDatabase } from '@lib/database';
+import { store } from '@store';
+import { loadCurrentUser } from '@store/thunks';
+import { useColorScheme } from '../hooks/use-color-scheme';
 
 export const unstable_settings = {
   anchor: '(tabs)',
 };
 
-export default function RootLayout() {
+function RootNavigator() {
   const colorScheme = useColorScheme();
   const router = useRouter();
   const segments = useSegments();
@@ -22,7 +24,10 @@ export default function RootLayout() {
     const initialize = async () => {
       try {
         await initDatabase();
-        const user = await getCurrentUser();
+        
+        // Load user from storage into Redux
+        const result = await store.dispatch(loadCurrentUser());
+        const user = result.payload;
         
         // Check if we're in the auth group
         const inAuthGroup = segments[0] === 'login';
@@ -59,8 +64,17 @@ export default function RootLayout() {
         <Stack.Screen name="add-expense" options={{ title: 'Add Expense', presentation: 'modal' }} />
         <Stack.Screen name="edit-expense/[id]" options={{ title: 'Edit Expense', presentation: 'modal' }} />
         <Stack.Screen name="import-expenses" options={{ title: 'Import Expenses', presentation: 'modal' }} />
+        <Stack.Screen name="add-member" options={{ title: 'Add Member', presentation: 'modal' }} />
       </Stack>
       <StatusBar style="auto" />
     </ThemeProvider>
+  );
+}
+
+export default function RootLayout() {
+  return (
+    <Provider store={store}>
+      <RootNavigator />
+    </Provider>
   );
 }

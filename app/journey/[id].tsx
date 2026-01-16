@@ -1,3 +1,4 @@
+import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import { useCallback, useState } from 'react';
@@ -18,8 +19,7 @@ import {
   getJourneyById,
   getJourneyExpenses
 } from '@/lib/database';
-import { Expense, Journey, JourneyBalance } from '@/types';
-import { Ionicons } from '@expo/vector-icons';
+import { Expense, Journey, JourneyBalance, Person, Settlement } from '@/types';
 
 // Professional Slate/Indigo Palette
 const THEME = {
@@ -180,7 +180,7 @@ export default function JourneyDetailScreen() {
             <View style={styles.section}>
               <ThemedText style={styles.sectionHeader}>Suggested Payments</ThemedText>
               <View style={styles.settleBox}>
-                {balance.settlements.map((s, i) => (
+                {balance.settlements.map((s: Settlement, i: number) => (
                   <View key={i} style={styles.settleRow}>
                     <View style={styles.settleIcon}><Ionicons name="arrow-forward" size={14} color="#fff" /></View>
                     <ThemedText style={styles.settleText}>
@@ -197,7 +197,7 @@ export default function JourneyDetailScreen() {
           <View style={styles.section}>
             <ThemedText style={styles.sectionHeader}>Group Balances</ThemedText>
             <View style={styles.card}>
-              {journey.participants.map((p) => {
+              {journey.participants.map((p: Person) => {
                 const bal = balance?.balances[p.id] || 0;
                 return (
                   <View key={p.id} style={styles.pRow}>

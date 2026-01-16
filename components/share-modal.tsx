@@ -1,21 +1,21 @@
 import { LinearGradient } from 'expo-linear-gradient';
 import { useState } from 'react';
 import {
-    Alert,
-    Modal,
-    ScrollView,
-    Share,
-    StyleSheet,
-    Switch,
-    TouchableOpacity,
+  Alert,
+  Modal,
+  ScrollView,
+  Share,
+  StyleSheet,
+  Switch,
+  TouchableOpacity,
 } from 'react-native';
 
 import { Colors } from '@/constants/colors';
 import {
-    formatExpenseListForSharing,
-    formatJourneyForSharing,
-    formatSettlementsForSharing,
-    ShareOptions
+  formatExpenseListForSharing,
+  formatJourneyForSharing,
+  formatSettlementsForSharing,
+  ShareOptions
 } from '@/lib/text-formatter';
 import { Expense, Journey } from '@/types';
 import { ThemedText } from './themed-text';
@@ -145,7 +145,7 @@ export function ShareModal({ visible, onClose, journey, expenses }: ShareModalPr
                 <ThemedText style={styles.optionLabel}>Summary Statistics</ThemedText>
                 <Switch
                   value={shareOptions.includeSummary}
-                  onValueChange={(value) => setShareOptions(prev => ({ ...prev, includeSummary: value }))}
+                  onValueChange={(value: boolean) => setShareOptions(prev => ({ ...prev, includeSummary: value }))}
                   trackColor={{ false: Colors.border, true: Colors.primaryLight }}
                   thumbColor={shareOptions.includeSummary ? Colors.primary : Colors.textLight}
                 />
@@ -155,7 +155,7 @@ export function ShareModal({ visible, onClose, journey, expenses }: ShareModalPr
                 <ThemedText style={styles.optionLabel}>Expense List</ThemedText>
                 <Switch
                   value={shareOptions.includeExpenses}
-                  onValueChange={(value) => setShareOptions(prev => ({ ...prev, includeExpenses: value }))}
+                  onValueChange={(value: boolean) => setShareOptions(prev => ({ ...prev, includeExpenses: value }))}
                   trackColor={{ false: Colors.border, true: Colors.primaryLight }}
                   thumbColor={shareOptions.includeExpenses ? Colors.primary : Colors.textLight}
                 />
@@ -165,7 +165,7 @@ export function ShareModal({ visible, onClose, journey, expenses }: ShareModalPr
                 <ThemedText style={styles.optionLabel}>Individual Balances</ThemedText>
                 <Switch
                   value={shareOptions.includeBalances}
-                  onValueChange={(value) => setShareOptions(prev => ({ ...prev, includeBalances: value }))}
+                  onValueChange={(value: boolean) => setShareOptions(prev => ({ ...prev, includeBalances: value }))}
                   trackColor={{ false: Colors.border, true: Colors.primaryLight }}
                   thumbColor={shareOptions.includeBalances ? Colors.primary : Colors.textLight}
                 />
@@ -175,7 +175,7 @@ export function ShareModal({ visible, onClose, journey, expenses }: ShareModalPr
                 <ThemedText style={styles.optionLabel}>Settlement Suggestions</ThemedText>
                 <Switch
                   value={shareOptions.includeSettlements}
-                  onValueChange={(value) => setShareOptions(prev => ({ ...prev, includeSettlements: value }))}
+                  onValueChange={(value: boolean) => setShareOptions(prev => ({ ...prev, includeSettlements: value }))}
                   trackColor={{ false: Colors.border, true: Colors.primaryLight }}
                   thumbColor={shareOptions.includeSettlements ? Colors.primary : Colors.textLight}
                 />
