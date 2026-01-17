@@ -1,5 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
-import { StyleSheet, View } from 'react-native';
+import { StyleSheet, TouchableOpacity, View } from 'react-native';
 
 import { ThemedText } from '@/components/themed-text';
 import { Settlement } from '@/types';
@@ -9,9 +9,10 @@ import { THEME } from './theme';
 interface SettlementsSectionProps {
   settlements: Settlement[];
   getPersonName: (personId: string) => string;
+  onSendReminder: (settlement: Settlement) => void;
 }
 
-export function SettlementsSection({ settlements, getPersonName }: SettlementsSectionProps) {
+export function SettlementsSection({ settlements, getPersonName, onSendReminder }: SettlementsSectionProps) {
   if (settlements.length === 0) return null;
 
   return (
@@ -23,11 +24,19 @@ export function SettlementsSection({ settlements, getPersonName }: SettlementsSe
             <View style={styles.settleIcon}>
               <Ionicons name="arrow-forward" size={14} color="#fff" />
             </View>
-            <ThemedText style={styles.settleText}>
-              <ThemedText style={styles.bold}>{getPersonName(s.from)}</ThemedText> pays{' '}
-              <ThemedText style={styles.bold}>{getPersonName(s.to)}</ThemedText>
-            </ThemedText>
-            <ThemedText style={styles.settleAmount}>₹{s.amount.toLocaleString()}</ThemedText>
+            <View style={styles.settleContent}>
+              <ThemedText style={styles.settleText}>
+                <ThemedText style={styles.bold}>{getPersonName(s.from)}</ThemedText> pays{' '}
+                <ThemedText style={styles.bold}>{getPersonName(s.to)}</ThemedText>
+              </ThemedText>
+              <ThemedText style={styles.settleAmount}>₹{s.amount.toLocaleString()}</ThemedText>
+            </View>
+            <TouchableOpacity
+              style={styles.reminderButton}
+              onPress={() => onSendReminder(s)}
+            >
+              <Ionicons name="chatbubble-outline" size={16} color={THEME.primary} />
+            </TouchableOpacity>
           </View>
         ))}
       </View>
@@ -63,16 +72,28 @@ const styles = StyleSheet.create({
     alignItems: 'center', 
     justifyContent: 'center' 
   },
+  settleContent: {
+    flex: 1,
+    marginLeft: 12,
+  },
   settleText: { 
-    flex: 1, 
-    marginLeft: 12, 
     fontSize: 14, 
     color: '#4338CA' 
   },
   settleAmount: { 
     fontSize: 15, 
     fontWeight: '800', 
-    color: THEME.primary 
+    color: THEME.primary,
+    marginTop: 2,
+  },
+  reminderButton: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: '#F3F4F6',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginLeft: 8,
   },
   bold: { fontWeight: '700' },
 });

@@ -4,7 +4,8 @@ import {
   addParticipantToJourneyThunk,
   createJourney,
   loadJourneyById,
-  loadJourneys
+  loadJourneys,
+  updateJourneyThunk
 } from './thunks';
 
 interface JourneyState {
@@ -58,6 +59,16 @@ const journeySlice = createSlice({
       // Create journey
       .addCase(createJourney.fulfilled, (state, action) => {
         state.journeys.unshift(action.payload);
+      })
+      // Update journey
+      .addCase(updateJourneyThunk.fulfilled, (state, action) => {
+        const index = state.journeys.findIndex(j => j.id === action.payload.id);
+        if (index !== -1) {
+          state.journeys[index] = action.payload;
+        }
+        if (state.currentJourney?.id === action.payload.id) {
+          state.currentJourney = action.payload;
+        }
       })
       // Add participant to journey
       .addCase(addParticipantToJourneyThunk.fulfilled, (state, action) => {

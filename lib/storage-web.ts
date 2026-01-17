@@ -72,6 +72,14 @@ export const getJourneyByIdWeb = (id: string): Promise<Journey | null> => {
   });
 };
 
+export const updateJourneyWeb = (journey: Journey): void => {
+  const existingIndex = journeys.findIndex(j => j.id === journey.id);
+  if (existingIndex >= 0) {
+    journeys[existingIndex] = journey;
+    saveToStorage();
+  }
+};
+
 // Person operations
 export const savePersonWeb = (person: Person): void => {
   const existingIndex = people.findIndex(p => p.id === person.id);

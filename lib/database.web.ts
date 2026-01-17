@@ -8,7 +8,8 @@ import {
   getJourneyExpensesWeb,
   getJourneysWeb,
   initWebStorage,
-  updateExpenseWeb
+  updateExpenseWeb,
+  updateJourneyWeb
 } from './storage-web';
 
 // Initialize database
@@ -27,6 +28,10 @@ export const getJourneys = (): Promise<Journey[]> => {
 
 export const getJourneyById = (id: string): Promise<Journey | null> => {
   return getJourneyByIdWeb(id);
+};
+
+export const updateJourney = (journey: Journey): void => {
+  updateJourneyWeb(journey);
 };
 
 // Person operations

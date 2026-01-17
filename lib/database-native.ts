@@ -21,6 +21,7 @@ export const initDatabase = async () => {
         id TEXT PRIMARY KEY NOT NULL,
         name TEXT NOT NULL,
         description TEXT,
+        image_url TEXT,
         created_at TEXT NOT NULL
       );
 
@@ -72,8 +73,8 @@ export const initDatabase = async () => {
 export const createJourney = async (journey: Journey): Promise<void> => {
   try {
     await db.runAsync(
-      'INSERT INTO journeys (id, name, description, created_at) VALUES (?, ?, ?, ?)',
-      [journey.id, journey.name, journey.description || '', journey.createdAt]
+      'INSERT INTO journeys (id, name, description, image_url, created_at) VALUES (?, ?, ?, ?, ?)',
+      [journey.id, journey.name, journey.description || '', journey.imageUrl || '', journey.createdAt]
     );
     
     // Add participants
@@ -98,6 +99,7 @@ export const getJourneys = async (): Promise<Journey[]> => {
         id: row.id,
         name: row.name,
         description: row.description,
+        imageUrl: row.image_url,
         createdAt: row.created_at,
         participants
       });
@@ -125,11 +127,24 @@ export const getJourneyById = async (id: string): Promise<Journey | null> => {
       id: journey.id,
       name: journey.name,
       description: journey.description,
+      imageUrl: journey.image_url,
       createdAt: journey.created_at,
       participants
     };
   } catch (error) {
     console.error('Error getting journey by id:', error);
+    throw error;
+  }
+};
+
+export const updateJourney = async (journey: Journey): Promise<void> => {
+  try {
+    await db.runAsync(
+      'UPDATE journeys SET name = ?, description = ?, image_url = ? WHERE id = ?',
+      [journey.name, journey.description || '', journey.imageUrl || '', journey.id]
+    );
+  } catch (error) {
+    console.error('Error updating journey:', error);
     throw error;
   }
 };

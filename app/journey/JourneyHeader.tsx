@@ -12,6 +12,7 @@ interface JourneyHeaderProps {
   expenseCount: number;
   onBack: () => void;
   onShare: () => void;
+  onEdit: () => void;
 }
 
 export function JourneyHeader({
@@ -21,6 +22,7 @@ export function JourneyHeader({
   expenseCount,
   onBack,
   onShare,
+  onEdit,
 }: JourneyHeaderProps) {
   return (
     <ImageBackground 
@@ -37,9 +39,14 @@ export function JourneyHeader({
           <TouchableOpacity onPress={onBack} style={styles.iconBtn} activeOpacity={0.7}>
             <Ionicons name="arrow-back" size={24} color="#fff" />
           </TouchableOpacity>
-          <TouchableOpacity onPress={onShare} style={styles.iconBtn} activeOpacity={0.7}>
-            <Ionicons name="share-outline" size={22} color="#fff" />
-          </TouchableOpacity>
+          <View style={styles.rightButtons}>
+            <TouchableOpacity onPress={onEdit} style={styles.iconBtn} activeOpacity={0.7}>
+              <Ionicons name="pencil-outline" size={20} color="#fff" />
+            </TouchableOpacity>
+            <TouchableOpacity onPress={onShare} style={styles.iconBtn} activeOpacity={0.7}>
+              <Ionicons name="share-outline" size={22} color="#fff" />
+            </TouchableOpacity>
+          </View>
         </View>
 
         <View style={styles.heroContent}>
@@ -89,6 +96,10 @@ const styles = StyleSheet.create({
     flexDirection: 'row', 
     justifyContent: 'space-between', 
     alignItems: 'center'
+  },
+  rightButtons: {
+    flexDirection: 'row',
+    gap: 8,
   },
   iconBtn: { 
     width: 44, 

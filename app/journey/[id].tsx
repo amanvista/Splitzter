@@ -2,12 +2,15 @@ import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import { useCallback, useMemo, useState } from 'react';
 import { Alert, ScrollView, StatusBar, StyleSheet, View } from 'react-native';
 
+import { EditJourneyModal } from '@/components/edit-journey-modal';
+import { ReminderModal } from '@/components/reminder-modal';
 import { ShareModal } from '@/components/share-modal';
 import { calculateJourneyBalance } from '@/lib/calculations';
 import { getJourneyImageUrl } from '@/lib/journey-images';
+import { sendPaymentReminder, sendSettlementConfirmation } from '@/lib/whatsapp-reminders';
 import { useAppDispatch, useAppSelector } from '@/store';
-import { deleteExpenseThunk, loadExpensesForJourney } from '@/store/thunks';
-import { Expense } from '@/types';
+import { deleteExpenseThunk, loadExpensesForJourney, updateJourneyThunk } from '@/store/thunks';
+import { Expense, Settlement } from '@/types';
 
 import { ActionButtons } from './ActionButtons';
 import { BalancesSection } from './BalancesSection';
@@ -24,6 +27,9 @@ export default function JourneyDetailScreen() {
     id ? state.expense.expenses[id] || [] : []
   );
   const [showShareModal, setShowShareModal] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [showReminderModal, setShowReminderModal] = useState(false);
+  const [selectedSettlement, setSelectedSettlement] = useState<Settlement | null>(null);
   const router = useRouter();
 
   // Calculate balance whenever expenses or journey changes
@@ -71,6 +77,52 @@ export default function JourneyDetailScreen() {
     router.push(`/edit-expense/${expenseId}`);
   };
 
+  const handleEditJourney = async (name: string, description: string) => {
+    if (!journey) return;
+    
+    try {
+      const updatedJourney = {
+        ...journey,
+        name,
+        description,
+      };
+      await dispatch(updateJourneyThunk(updatedJourney)).unwrap();
+    } catch (error) {
+      Alert.alert('Error', 'Failed to update journey');
+    }
+  };
+
+  const handleSendReminder = (settlement: Settlement) => {
+    setSelectedSettlement(settlement);
+    setShowReminderModal(true);
+  };
+
+  const handleSendPaymentReminder = async () => {
+    if (!selectedSettlement || !journey) return;
+    
+    const fromPerson = journey.participants.find(p => p.id === selectedSettlement.from);
+    const toPerson = journey.participants.find(p => p.id === selectedSettlement.to);
+    
+    if (!fromPerson || !toPerson) {
+      throw new Error('Could not find participant information');
+    }
+    
+    await sendPaymentReminder(selectedSettlement, fromPerson, toPerson, journey.name);
+  };
+
+  const handleSendSettlementConfirmation = async () => {
+    if (!selectedSettlement || !journey) return;
+    
+    const fromPerson = journey.participants.find(p => p.id === selectedSettlement.from);
+    const toPerson = journey.participants.find(p => p.id === selectedSettlement.to);
+    
+    if (!fromPerson || !toPerson) {
+      throw new Error('Could not find participant information');
+    }
+    
+    await sendSettlementConfirmation(selectedSettlement, fromPerson, toPerson, journey.name);
+  };
+
   if (!journey) return null;
 
   const journeyImageUrl = getJourneyImageUrl(journey.id, journey.imageUrl);
@@ -87,6 +139,7 @@ export default function JourneyDetailScreen() {
           expenseCount={expenses.length}
           onBack={() => router.back()}
           onShare={() => setShowShareModal(true)}
+          onEdit={() => setShowEditModal(true)}
         />
 
         <View style={styles.body}>
@@ -100,6 +153,7 @@ export default function JourneyDetailScreen() {
             <SettlementsSection
               settlements={balance.settlements}
               getPersonName={getPersonName}
+              onSendReminder={handleSendReminder}
             />
           )}
 
@@ -122,6 +176,28 @@ export default function JourneyDetailScreen() {
         onClose={() => setShowShareModal(false)} 
         journey={journey} 
         expenses={expenses} 
+      />
+
+      <EditJourneyModal
+        visible={showEditModal}
+        journeyName={journey.name}
+        journeyDescription={journey.description}
+        onClose={() => setShowEditModal(false)}
+        onSave={handleEditJourney}
+      />
+
+      <ReminderModal
+        visible={showReminderModal}
+        settlement={selectedSettlement}
+        fromPerson={selectedSettlement ? journey.participants.find(p => p.id === selectedSettlement.from) || null : null}
+        toPerson={selectedSettlement ? journey.participants.find(p => p.id === selectedSettlement.to) || null : null}
+        journeyName={journey.name}
+        onClose={() => {
+          setShowReminderModal(false);
+          setSelectedSettlement(null);
+        }}
+        onSendReminder={handleSendPaymentReminder}
+        onSendConfirmation={handleSendSettlementConfirmation}
       />
     </View>
   );

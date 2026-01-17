@@ -36,6 +36,11 @@ export const getJourneyById = async (id: string): Promise<any> => {
   return db.getJourneyById(id);
 };
 
+export const updateJourney = async (journey: any): Promise<void> => {
+  const db = await getDBModule();
+  return db.updateJourney(journey);
+};
+
 // Person operations
 export const savePerson = async (person: any): Promise<void> => {
   const db = await getDBModule();

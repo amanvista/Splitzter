@@ -39,6 +39,11 @@ export const createJourney = createAsyncThunk('journey/create', async (journey: 
   return journey;
 });
 
+export const updateJourneyThunk = createAsyncThunk('journey/update', async (journey: Journey) => {
+  await dbUpdateJourney(journey);
+  return journey;
+});
+
 export const addParticipantToJourneyThunk = createAsyncThunk(
   'journey/addParticipant',
   async ({ journeyId, participant }: { journeyId: string; participant: Person }) => {
