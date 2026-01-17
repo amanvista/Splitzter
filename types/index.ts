@@ -10,6 +10,7 @@ export interface Journey {
   id: string;
   name: string;
   description?: string;
+  imageUrl?: string;
   createdAt: string;
   participants: Person[];
 }

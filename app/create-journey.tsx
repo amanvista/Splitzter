@@ -16,6 +16,7 @@ import {
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { getContacts } from '@/lib/contacts';
+import { getRandomJourneyImage } from '@/lib/journey-images';
 import { useAppDispatch, useAppSelector } from '@/store';
 import { createJourney } from '@/store/thunks';
 import { Journey, Person } from '@/types';
@@ -118,6 +119,7 @@ export default function CreateJourneyScreen() {
         id: `journey_${Date.now()}`,
         name: journeyName.trim(),
         description: journeyDescription.trim(),
+        imageUrl: getRandomJourneyImage(), // Assign a random image
         createdAt: new Date().toISOString(),
         participants: selectedParticipants,
       };
