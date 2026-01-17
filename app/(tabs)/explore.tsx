@@ -1,6 +1,8 @@
+import { Ionicons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useFocusEffect } from 'expo-router';
 import { useCallback, useState } from 'react';
-import { FlatList, ScrollView, StyleSheet } from 'react-native';
+import { FlatList, Platform, ScrollView, StyleSheet, View } from 'react-native';
 
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
@@ -27,8 +29,8 @@ export default function ExploreScreen() {
     try {
       const journeys = await getJourneys();
       const stats: JourneyStats[] = [];
-      let totalExpenses = 0;
       let totalAmount = 0;
+      let totalExpCount = 0;
 
       for (const journey of journeys) {
         const expenses = await getJourneyExpenses(journey.id);
@@ -42,14 +44,14 @@ export default function ExploreScreen() {
           avgExpensePerPerson: avgPerPerson,
         });
 
-        totalExpenses += expenses.length;
+        totalExpCount += expenses.length;
         totalAmount += journeyTotal;
       }
 
       setJourneyStats(stats.sort((a, b) => b.totalExpenses - a.totalExpenses));
       setOverallStats({
         totalJourneys: journeys.length,
-        totalExpenses,
+        totalExpenses: totalExpCount,
         totalAmount,
         avgExpensePerJourney: journeys.length > 0 ? totalAmount / journeys.length : 0,
       });
@@ -58,73 +60,85 @@ export default function ExploreScreen() {
     }
   };
 
-  useFocusEffect(
-    useCallback(() => {
-      loadStatistics();
-    }, [])
-  );
+  useFocusEffect(useCallback(() => { loadStatistics(); }, []));
 
-  const renderJourneyStat = ({ item }: { item: JourneyStats }) => (
-    <ThemedView style={styles.statCard}>
-      <ThemedText style={styles.journeyName}>{item.journey.name}</ThemedText>
-      <ThemedView style={styles.statRow}>
-        <ThemedText style={styles.statLabel}>Total Expenses:</ThemedText>
-        <ThemedText style={styles.statValue}>${item.totalExpenses.toFixed(2)}</ThemedText>
+  const renderJourneyStat = ({ item }: { item: JourneyStats }) => {
+    // Calculate percentage relative to total spent (for a small visual bar)
+    const intensity = Math.min((item.totalExpenses / overallStats.totalAmount) * 100, 100);
+
+    return (
+      <ThemedView style={styles.statCard}>
+        <View style={styles.cardHeader}>
+          <ThemedText style={styles.journeyName}>{item.journey.name}</ThemedText>
+          <ThemedText style={styles.journeyPrice}>₹{item.totalExpenses.toLocaleString()}</ThemedText>
+        </View>
+        
+        {/* Visual Progress Bar */}
+        <View style={styles.progressBarBg}>
+          <LinearGradient 
+            colors={['#6366f1', '#a855f7']} 
+            start={{x:0, y:0}} end={{x:1, y:0}} 
+            style={[styles.progressBarFill, { width: `${intensity || 0}%` }]} 
+          />
+        </View>
+
+        <View style={styles.cardGrid}>
+          <View style={styles.gridItem}>
+            <Ionicons name="receipt-outline" size={14} color="#94A3B8" />
+            <ThemedText style={styles.gridValue}>{item.expenseCount} Items</ThemedText>
+          </View>
+          <View style={styles.gridItem}>
+            <Ionicons name="people-outline" size={14} color="#94A3B8" />
+            <ThemedText style={styles.gridValue}>{item.journey.participants.length} Split</ThemedText>
+          </View>
+          <View style={[styles.gridItem, { flex: 1.5 }]}>
+            <Ionicons name="wallet-outline" size={14} color="#94A3B8" />
+            <ThemedText style={styles.gridValue}>Avg: ₹{item.avgExpensePerPerson.toFixed(0)}</ThemedText>
+          </View>
+        </View>
       </ThemedView>
-      <ThemedView style={styles.statRow}>
-        <ThemedText style={styles.statLabel}>Number of Expenses:</ThemedText>
-        <ThemedText style={styles.statValue}>{item.expenseCount}</ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.statRow}>
-        <ThemedText style={styles.statLabel}>Avg per Person:</ThemedText>
-        <ThemedText style={styles.statValue}>${item.avgExpensePerPerson.toFixed(2)}</ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.statRow}>
-        <ThemedText style={styles.statLabel}>Participants:</ThemedText>
-        <ThemedText style={styles.statValue}>{item.journey.participants.length}</ThemedText>
-      </ThemedView>
-    </ThemedView>
-  );
+    );
+  };
 
   return (
-    <ScrollView style={styles.container}>
-      <ThemedText style={styles.title}>Statistics</ThemedText>
+    <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
+      <ThemedText style={styles.title}>Analytics</ThemedText>
 
-      <ThemedView style={styles.overallSection}>
-        <ThemedText style={styles.sectionTitle}>Overall Summary</ThemedText>
-        <ThemedView style={styles.overallCard}>
-          <ThemedView style={styles.overallRow}>
-            <ThemedView style={styles.overallStat}>
-              <ThemedText style={styles.overallNumber}>{overallStats.totalJourneys}</ThemedText>
-              <ThemedText style={styles.overallLabel}>Journeys</ThemedText>
-            </ThemedView>
-            <ThemedView style={styles.overallStat}>
-              <ThemedText style={styles.overallNumber}>{overallStats.totalExpenses}</ThemedText>
-              <ThemedText style={styles.overallLabel}>Expenses</ThemedText>
-            </ThemedView>
-          </ThemedView>
-          <ThemedView style={styles.overallRow}>
-            <ThemedView style={styles.overallStat}>
-              <ThemedText style={styles.overallNumber}>${overallStats.totalAmount.toFixed(0)}</ThemedText>
-              <ThemedText style={styles.overallLabel}>Total Amount</ThemedText>
-            </ThemedView>
-            <ThemedView style={styles.overallStat}>
-              <ThemedText style={styles.overallNumber}>${overallStats.avgExpensePerJourney.toFixed(0)}</ThemedText>
-              <ThemedText style={styles.overallLabel}>Avg per Journey</ThemedText>
-            </ThemedView>
-          </ThemedView>
-        </ThemedView>
-      </ThemedView>
+      {/* Hero Overall Stats Card */}
+      <LinearGradient colors={['#6366f1', '#8b5cf6', '#a855f7']} style={styles.heroCard}>
+        <ThemedText style={styles.heroLabel}>Lifetime Spends</ThemedText>
+        <ThemedText style={styles.heroMainAmount}>₹{overallStats.totalAmount.toLocaleString()}</ThemedText>
+        
+        <View style={styles.heroGrid}>
+          <View style={styles.heroStatItem}>
+            <ThemedText style={styles.heroStatNum}>{overallStats.totalJourneys}</ThemedText>
+            <ThemedText style={styles.heroStatLabel}>Journeys</ThemedText>
+          </View>
+          <View style={styles.heroDivider} />
+          <View style={styles.heroStatItem}>
+            <ThemedText style={styles.heroStatNum}>{overallStats.totalExpenses}</ThemedText>
+            <ThemedText style={styles.heroStatLabel}>Expenses</ThemedText>
+          </View>
+          <View style={styles.heroDivider} />
+          <View style={styles.heroStatItem}>
+            <ThemedText style={styles.heroStatNum}>₹{overallStats.avgExpensePerJourney.toFixed(0)}</ThemedText>
+            <ThemedText style={styles.heroStatLabel}>Avg/Trip</ThemedText>
+          </View>
+        </View>
+      </LinearGradient>
 
       <ThemedView style={styles.journeySection}>
-        <ThemedText style={styles.sectionTitle}>Journey Breakdown</ThemedText>
+        <View style={styles.sectionHeader}>
+          <ThemedText style={styles.sectionTitle}>Journey Breakdown</ThemedText>
+          <Ionicons name="bar-chart-outline" size={20} color="#64748B" />
+        </View>
+
         {journeyStats.length === 0 ? (
-          <ThemedView style={styles.emptyState}>
-            <ThemedText style={styles.emptyText}>No journey data yet</ThemedText>
-            <ThemedText style={styles.emptySubtext}>
-              Create journeys and add expenses to see statistics
-            </ThemedText>
-          </ThemedView>
+          <View style={styles.emptyState}>
+            <Ionicons name="pie-chart-outline" size={48} color="#CBD5E1" />
+            <ThemedText style={styles.emptyText}>No Analytics Yet</ThemedText>
+            <ThemedText style={styles.emptySubtext}>Your trip spending patterns will appear here.</ThemedText>
+          </View>
         ) : (
           <FlatList
             data={journeyStats}
@@ -139,85 +153,50 @@ export default function ExploreScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    padding: 16,
-  },
-  title: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    marginBottom: 24,
-  },
-  overallSection: {
+  container: { flex: 1, backgroundColor: '#F8F9FA', padding: 20 },
+  title: { fontSize: 28, fontWeight: '800', marginBottom: 24, paddingTop: Platform.OS === 'ios' ? 40 : 20 },
+  
+  heroCard: {
+    padding: 24,
+    borderRadius: 32,
     marginBottom: 32,
+    ...Platform.select({
+      ios: { shadowColor: '#6366f1', shadowOffset: { width: 0, height: 10 }, shadowOpacity: 0.3, shadowRadius: 20 },
+      android: { elevation: 10 },
+    }),
   },
-  sectionTitle: {
-    fontSize: 20,
-    fontWeight: '600',
-    marginBottom: 16,
-  },
-  overallCard: {
-    backgroundColor: '#f8f9fa',
-    padding: 20,
-    borderRadius: 12,
-  },
-  overallRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-    marginBottom: 16,
-  },
-  overallStat: {
-    alignItems: 'center',
-  },
-  overallNumber: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#007AFF',
-    marginBottom: 4,
-  },
-  overallLabel: {
-    fontSize: 14,
-    opacity: 0.7,
-  },
-  journeySection: {
-    marginBottom: 24,
-  },
+  heroLabel: { color: '#fff', fontSize: 13, fontWeight: '600', opacity: 0.8, textTransform: 'uppercase', letterSpacing: 1 },
+  heroMainAmount: { color: '#fff', fontSize: 40, fontWeight: '900', marginVertical: 12 },
+  heroGrid: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 16, backgroundColor: 'rgba(255,255,255,0.15)', borderRadius: 20, padding: 15 },
+  heroStatItem: { flex: 1, alignItems: 'center' },
+  heroStatNum: { color: '#fff', fontSize: 16, fontWeight: '800' },
+  heroStatLabel: { color: '#fff', fontSize: 10, opacity: 0.7, marginTop: 2, fontWeight: '600' },
+  heroDivider: { width: 1, height: 20, backgroundColor: 'rgba(255,255,255,0.2)' },
+
+  journeySection: { marginBottom: 40 },
+  sectionHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 },
+  sectionTitle: { fontSize: 18, fontWeight: '800', color: '#1E293B' },
+  
   statCard: {
-    backgroundColor: '#f8f9fa',
-    padding: 16,
-    borderRadius: 8,
-    marginBottom: 12,
+    backgroundColor: '#fff',
+    padding: 20,
+    borderRadius: 24,
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: '#F1F5F9',
   },
-  journeyName: {
-    fontSize: 16,
-    fontWeight: '600',
-    marginBottom: 12,
-    color: '#007AFF',
-  },
-  statRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: 6,
-  },
-  statLabel: {
-    fontSize: 14,
-  },
-  statValue: {
-    fontSize: 14,
-    fontWeight: '500',
-  },
-  emptyState: {
-    alignItems: 'center',
-    padding: 32,
-  },
-  emptyText: {
-    fontSize: 16,
-    fontWeight: '600',
-    marginBottom: 8,
-  },
-  emptySubtext: {
-    fontSize: 14,
-    opacity: 0.7,
-    textAlign: 'center',
-  },
+  cardHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 },
+  journeyName: { fontSize: 16, fontWeight: '700', color: '#1E293B' },
+  journeyPrice: { fontSize: 16, fontWeight: '800', color: '#6366f1' },
+  
+  progressBarBg: { height: 6, backgroundColor: '#F1F5F9', borderRadius: 3, marginBottom: 16, overflow: 'hidden' },
+  progressBarFill: { height: '100%', borderRadius: 3 },
+  
+  cardGrid: { flexDirection: 'row', justifyContent: 'space-between', gap: 10 },
+  gridItem: { flexDirection: 'row', alignItems: 'center', gap: 4, flex: 1 },
+  gridValue: { fontSize: 12, fontWeight: '600', color: '#64748B' },
+
+  emptyState: { alignItems: 'center', padding: 40, marginTop: 20 },
+  emptyText: { fontSize: 18, fontWeight: '700', color: '#94A3B8', marginTop: 16 },
+  emptySubtext: { fontSize: 14, color: '#CBD5E1', textAlign: 'center', marginTop: 8 },
 });

@@ -1,10 +1,9 @@
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
-import { ImageBackground, StyleSheet, TouchableOpacity, View } from 'react-native';
+import { ImageBackground, Platform, StyleSheet, TouchableOpacity, View } from 'react-native';
 
 import { ThemedText } from '@/components/themed-text';
 import { Journey } from '@/types';
-
 
 interface JourneyHeaderProps {
   journey: Journey;
@@ -26,37 +25,41 @@ export function JourneyHeader({
   return (
     <ImageBackground 
       source={{ uri: imageUrl }} 
-      style={styles.headerImage}
-      imageStyle={styles.headerImageStyle}
+      style={styles.container}
+      imageStyle={styles.imageStyle}
     >
+      {/* Overlaid Gradient for Text Readability */}
       <LinearGradient 
-        colors={['rgba(99, 102, 241, 0.85)', 'rgba(139, 92, 246, 0.85)']} 
-        style={styles.header}
+        colors={['rgba(0,0,0,0.3)', 'rgba(79, 70, 229, 0.7)', 'rgba(124, 58, 237, 0.9)']} 
+        style={styles.overlay}
       >
         <View style={styles.navBar}>
-          <TouchableOpacity onPress={onBack} style={styles.iconBtn}>
-            <Ionicons name="chevron-back" size={24} color="#fff" />
+          <TouchableOpacity onPress={onBack} style={styles.iconBtn} activeOpacity={0.7}>
+            <Ionicons name="arrow-back" size={24} color="#fff" />
           </TouchableOpacity>
-          <TouchableOpacity onPress={onShare} style={styles.iconBtn}>
-            <Ionicons name="share-social-outline" size={22} color="#fff" />
+          <TouchableOpacity onPress={onShare} style={styles.iconBtn} activeOpacity={0.7}>
+            <Ionicons name="share-outline" size={22} color="#fff" />
           </TouchableOpacity>
         </View>
 
         <View style={styles.heroContent}>
           <ThemedText style={styles.journeyName}>{journey.name}</ThemedText>
-          <ThemedText style={styles.mainLabel}>Total Spent</ThemedText>
-          <ThemedText style={styles.mainAmount}>₹{totalExpenses.toLocaleString()}</ThemedText>
+          <View style={styles.amountContainer}>
+             <ThemedText style={styles.currencySymbol}>₹</ThemedText>
+             <ThemedText style={styles.mainAmount}>{totalExpenses.toLocaleString()}</ThemedText>
+          </View>
+          <ThemedText style={styles.mainLabel}>Overall Expenditure</ThemedText>
         </View>
 
-        <View style={styles.statsBar}>
+        <View style={styles.glassStatsBar}>
           <View style={styles.statBox}>
             <ThemedText style={styles.statNum}>{expenseCount}</ThemedText>
-            <ThemedText style={styles.statLabel}>Expenses</ThemedText>
+            <ThemedText style={styles.statLabel}>EXPENSES</ThemedText>
           </View>
-          <View style={styles.statSep} />
+          <View style={styles.divider} />
           <View style={styles.statBox}>
             <ThemedText style={styles.statNum}>{journey.participants.length}</ThemedText>
-            <ThemedText style={styles.statLabel}>Members</ThemedText>
+            <ThemedText style={styles.statLabel}>MEMBERS</ThemedText>
           </View>
         </View>
       </LinearGradient>
@@ -65,48 +68,106 @@ export function JourneyHeader({
 }
 
 const styles = StyleSheet.create({
-  headerImage: { overflow: 'hidden' },
-  headerImageStyle: { borderBottomLeftRadius: 36, borderBottomRightRadius: 36 },
-  header: { 
-    paddingHorizontal: 20, 
-    paddingTop: 50, 
+  container: { 
+    height: 340, // Fixed height for a hero section
+    backgroundColor: '#1e1e1e' 
+  },
+  imageStyle: { 
+    borderBottomLeftRadius: 40, 
+    borderBottomRightRadius: 40 
+  },
+  overlay: { 
+    flex: 1,
+    paddingHorizontal: 24, 
+    paddingTop: Platform.OS === 'ios' ? 60 : 40, 
     paddingBottom: 30, 
-    borderBottomLeftRadius: 36, 
-    borderBottomRightRadius: 36 
+    borderBottomLeftRadius: 40, 
+    borderBottomRightRadius: 40,
+    justifyContent: 'space-between'
   },
   navBar: { 
     flexDirection: 'row', 
     justifyContent: 'space-between', 
-    marginBottom: 20 
+    alignItems: 'center'
   },
   iconBtn: { 
-    width: 40, 
-    height: 40, 
-    borderRadius: 12, 
-    backgroundColor: 'rgba(255,255,255,0.3)', 
+    width: 44, 
+    height: 44, 
+    borderRadius: 14, 
+    backgroundColor: 'rgba(255,255,255,0.25)', 
     alignItems: 'center', 
-    justifyContent: 'center' 
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.3)'
   },
-  heroContent: { alignItems: 'center', marginBottom: 25 },
+  heroContent: { 
+    alignItems: 'center',
+    marginTop: 10
+  },
   journeyName: { 
     color: '#fff', 
-    fontSize: 14, 
-    opacity: 0.95, 
-    textTransform: 'uppercase', 
-    letterSpacing: 1, 
-    fontWeight: '600' 
+    fontSize: 12, 
+    fontWeight: '700',
+    letterSpacing: 2,
+    textTransform: 'uppercase',
+    opacity: 0.8,
+    marginBottom: 4
   },
-  mainLabel: { color: '#fff', fontSize: 12, opacity: 0.85, marginTop: 8 },
-  mainAmount: { color: '#fff', fontSize: 48, fontWeight: '800' },
-  
-  statsBar: { 
+  amountContainer: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+  },
+  currencySymbol: {
+    color: '#fff',
+    fontSize: 24,
+    fontWeight: '600',
+    marginTop: 8,
+    marginRight: 4
+  },
+  mainAmount: { 
+    color: '#fff', 
+    fontSize: 56, 
+    fontWeight: '900',
+    textShadowColor: 'rgba(0, 0, 0, 0.3)',
+    textShadowOffset: { width: 0, height: 4 },
+    textShadowRadius: 10,
+  },
+  mainLabel: { 
+    color: '#fff', 
+    fontSize: 14, 
+    opacity: 0.7, 
+    fontWeight: '500' 
+  },
+  glassStatsBar: { 
     flexDirection: 'row', 
     backgroundColor: 'rgba(255,255,255,0.15)', 
-    borderRadius: 20, 
-    padding: 15 
+    borderRadius: 24, 
+    paddingVertical: 18,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.2)',
+    backdropFilter: 'blur(10px)', // For web-based viewers
   },
-  statBox: { flex: 1, alignItems: 'center' },
-  statNum: { color: '#fff', fontSize: 18, fontWeight: '700' },
-  statLabel: { color: '#fff', fontSize: 11, opacity: 0.7 },
-  statSep: { width: 1, backgroundColor: 'rgba(255,255,255,0.2)' },
+  statBox: { 
+    flex: 1, 
+    alignItems: 'center' 
+  },
+  statNum: { 
+    color: '#fff', 
+    fontSize: 20, 
+    fontWeight: '800' 
+  },
+  statLabel: { 
+    color: '#fff', 
+    fontSize: 10, 
+    fontWeight: '600',
+    opacity: 0.6,
+    marginTop: 2,
+    letterSpacing: 1
+  },
+  divider: { 
+    width: 1, 
+    height: '60%',
+    backgroundColor: 'rgba(255,255,255,0.3)',
+    alignSelf: 'center'
+  },
 });

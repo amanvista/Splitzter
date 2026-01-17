@@ -1,5 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
-import * as Haptics from 'expo-haptics'; // Recommended: npx expo install expo-haptics
+import * as Haptics from 'expo-haptics';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
 import {
@@ -15,6 +16,7 @@ import {
 } from 'react-native';
 
 import { ThemedText } from '@/components/themed-text';
+import { ThemedView } from '@/components/themed-view';
 import { useAppDispatch, useAppSelector } from '@/store';
 import { createExpenseThunk } from '@/store/thunks';
 import { Expense, Person } from '@/types';
@@ -24,6 +26,7 @@ export default function AddExpenseScreen() {
   const dispatch = useAppDispatch();
   const journey = useAppSelector((state) => state.journey.currentJourney);
   const currentUser = useAppSelector((state) => state.user.currentUser);
+  
   const [title, setTitle] = useState('');
   const [amount, setAmount] = useState('');
   const [isPaidByMe, setIsPaidByMe] = useState(true);
@@ -34,7 +37,6 @@ export default function AddExpenseScreen() {
 
   useEffect(() => {
     if (journey && currentUser) {
-      // Select all participants except current user by default
       setSelected(journey.participants.filter((p: Person) => p.id !== currentUser.id).map((p: Person) => p.id));
     }
   }, [journey, currentUser]);
@@ -42,7 +44,6 @@ export default function AddExpenseScreen() {
   const toggleParticipant = (id: string) => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     if (!isPaidByMe) {
-      // In "I Owe" mode, you usually owe just one person
       setSelected([id]);
     } else {
       setSelected(prev => prev.includes(id) ? prev.filter(p => p !== id) : [...prev, id]);
@@ -52,7 +53,6 @@ export default function AddExpenseScreen() {
   const handleToggleMode = (mePaid: boolean) => {
     Haptics.selectionAsync();
     setIsPaidByMe(mePaid);
-    // Reset selection to first person if switching to "I Owe"
     if (!mePaid && selected.length > 1) {
       setSelected([selected[0]]);
     }
@@ -65,10 +65,6 @@ export default function AddExpenseScreen() {
     }
     if (selected.length === 0) {
       Alert.alert('Missing Info', 'Please select at least one person.');
-      return;
-    }
-    if (!currentUser) {
-      Alert.alert('Error', 'User not found');
       return;
     }
 
@@ -99,190 +95,178 @@ export default function AddExpenseScreen() {
   if (!journey) return null;
 
   return (
-    <KeyboardAvoidingView 
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'} 
-      style={{ flex: 1, backgroundColor: '#fff' }}
-    >
-      <ScrollView 
-        style={styles.container} 
-        keyboardShouldPersistTaps="handled"
-        showsVerticalScrollIndicator={false}
-      >
-        <View style={styles.header}>
-          <ThemedText style={styles.title}>New Expense</ThemedText>
+    <ThemedView style={styles.container}>
+      {/* Brand Consistent Header */}
+      <LinearGradient colors={['#6366f1', '#8b5cf6', '#a855f7']} style={styles.header}>
+        <View style={styles.headerTop}>
           <TouchableOpacity onPress={() => router.back()} style={styles.closeBtn}>
-            <Ionicons name="close" size={24} color="#000" />
+            <Ionicons name="close" size={24} color="#fff" />
           </TouchableOpacity>
+          <ThemedText style={styles.headerTitle}>Add Expense</ThemedText>
+          <View style={{ width: 40 }} />
         </View>
+        <ThemedText style={styles.headerSubtitle}>{journey.name}</ThemedText>
+      </LinearGradient>
 
-        {/* Amount Input Section */}
-        <View style={styles.amountSection}>
-          <View style={styles.amountRow}>
-            <ThemedText style={styles.currency}>₹</ThemedText>
+      <KeyboardAvoidingView 
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'} 
+        style={{ flex: 1 }}
+      >
+        <ScrollView 
+          contentContainerStyle={styles.scrollContent}
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
+        >
+          {/* Hero Amount Input */}
+          <View style={styles.amountContainer}>
+            <View style={styles.amountRow}>
+              <ThemedText style={styles.currencySymbol}>₹</ThemedText>
+              <TextInput
+                style={styles.mainAmountInput}
+                value={amount}
+                onChangeText={setAmount}
+                keyboardType="decimal-pad"
+                placeholder="0"
+                placeholderTextColor="#CBD5E1"
+                autoFocus
+              />
+            </View>
             <TextInput
-              style={styles.amountInput}
-              value={amount}
-              onChangeText={setAmount}
-              keyboardType="decimal-pad"
-              placeholder="0"
-              placeholderTextColor="#E0E0E0"
-              autoFocus
+              style={styles.descriptionInput}
+              placeholder="What was this for?"
+              placeholderTextColor="#94A3B8"
+              value={title}
+              onChangeText={setTitle}
             />
           </View>
-          <TextInput
-            style={styles.titleInput}
-            placeholder="What was this for?"
-            placeholderTextColor="#A0A0A0"
-            value={title}
-            onChangeText={setTitle}
-          />
-        </View>
 
-        {/* Mode Switcher */}
-        <View style={styles.modeContainer}>
-          <TouchableOpacity 
-            onPress={() => handleToggleMode(true)} 
-            style={[styles.modeBtn, isPaidByMe && styles.modeBtnPaid]}
-          >
-            <ThemedText style={[styles.modeText, isPaidByMe && styles.textWhite]}>I Paid</ThemedText>
-          </TouchableOpacity>
-          <TouchableOpacity 
-            onPress={() => handleToggleMode(false)} 
-            style={[styles.modeBtn, !isPaidByMe && styles.modeBtnOwe]}
-          >
-            <ThemedText style={[styles.modeText, !isPaidByMe && styles.textWhite]}>I Owe</ThemedText>
-          </TouchableOpacity>
-        </View>
+          {/* Mode Switcher - Custom Styled */}
+          <View style={styles.modeToggle}>
+            <TouchableOpacity 
+              onPress={() => handleToggleMode(true)} 
+              style={[styles.modeOption, isPaidByMe && styles.modeActive]}
+            >
+              <ThemedText style={[styles.modeLabel, isPaidByMe && styles.modeLabelActive]}>I Paid</ThemedText>
+            </TouchableOpacity>
+            <TouchableOpacity 
+              onPress={() => handleToggleMode(false)} 
+              style={[styles.modeOption, !isPaidByMe && styles.modeActive]}
+            >
+              <ThemedText style={[styles.modeLabel, !isPaidByMe && styles.modeLabelActive]}>I Owe</ThemedText>
+            </TouchableOpacity>
+          </View>
 
-        <ThemedText style={styles.sectionLabel}>
-          {isPaidByMe ? "Split with" : "You owe"}
-        </ThemedText>
+          <ThemedText style={styles.sectionHeading}>
+            {isPaidByMe ? "SPLIT WITH" : "WHO DO YOU OWE?"}
+          </ThemedText>
 
-        {/* Participants Grid */}
-        <View style={styles.peopleGrid}>
-          {journey.participants.filter(p => p.id !== currentUser?.id).map(p => {
-            const isActive = selected.includes(p.id);
-            return (
-              <TouchableOpacity 
-                key={p.id} 
-                style={[
-                  styles.personCard, 
-                  isActive && (isPaidByMe ? styles.cardActivePaid : styles.cardActiveOwe)
-                ]} 
-                onPress={() => toggleParticipant(p.id)}
-              >
-                <View style={[styles.avatar, isActive && styles.avatarActive]}>
-                  <ThemedText style={[styles.avatarInitial, isActive && styles.textWhite]}>
-                    {p.name[0]}
+          {/* Modern Participant Grid */}
+          <View style={styles.grid}>
+            {journey.participants.filter(p => p.id !== currentUser?.id).map(p => {
+              const isActive = selected.includes(p.id);
+              return (
+                <TouchableOpacity 
+                  key={p.id} 
+                  activeOpacity={0.7}
+                  style={[styles.personCard, isActive && styles.personCardActive]} 
+                  onPress={() => toggleParticipant(p.id)}
+                >
+                  <View style={[styles.avatarCircle, isActive && styles.avatarCircleActive]}>
+                    <ThemedText style={[styles.avatarInitial, isActive && { color: '#fff' }]}>
+                      {p.name[0]}
+                    </ThemedText>
+                  </View>
+                  <ThemedText style={[styles.personLabel, isActive && { color: '#fff' }]} numberOfLines={1}>
+                    {p.name.split(' ')[0]}
                   </ThemedText>
-                </View>
-                <ThemedText style={[styles.personName, isActive && styles.textWhite]} numberOfLines={1}>
-                  {p.name.split(' ')[0]}
+                  {isActive && <Ionicons name="checkmark-circle" size={16} color="#fff" style={styles.checkIcon} />}
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+
+          <View style={{ height: 120 }} />
+        </ScrollView>
+
+        {/* Sticky Action Footer */}
+        <View style={styles.footer}>
+          <TouchableOpacity onPress={save} disabled={loading || !amount} style={styles.saveBtnWrapper}>
+            <LinearGradient
+              colors={['#6366f1', '#a855f7']}
+              start={{x:0, y:0}} end={{x:1, y:0}}
+              style={[styles.saveGradient, (!amount || selected.length === 0) && { opacity: 0.5 }]}
+            >
+              {loading ? (
+                <ActivityIndicator color="#fff" />
+              ) : (
+                <ThemedText style={styles.saveBtnText}>
+                  Confirm ₹{amount || '0'}
                 </ThemedText>
-              </TouchableOpacity>
-            );
-          })}
+              )}
+            </LinearGradient>
+          </TouchableOpacity>
         </View>
-
-        <View style={{ height: 100 }} />
-      </ScrollView>
-
-      {/* Action Footer */}
-      <View style={styles.footer}>
-        <TouchableOpacity 
-          style={[styles.saveButton, (!amount || selected.length === 0) && styles.saveDisabled]} 
-          onPress={save}
-          disabled={loading}
-        >
-          {loading ? (
-            <ActivityIndicator color="#fff" />
-          ) : (
-            <ThemedText style={styles.saveButtonText}>
-              Add ₹{amount || '0'}
-            </ThemedText>
-          )}
-        </TouchableOpacity>
-      </View>
-    </KeyboardAvoidingView>
+      </KeyboardAvoidingView>
+    </ThemedView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, paddingHorizontal: 24 },
+  container: { flex: 1, backgroundColor: '#F8F9FA' },
   header: { 
-    flexDirection: 'row', 
-    justifyContent: 'space-between', 
-    alignItems: 'center', 
-    marginTop: 20, 
-    marginBottom: 40 
+    paddingTop: Platform.OS === 'ios' ? 60 : 50, 
+    paddingBottom: 35, 
+    paddingHorizontal: 24, 
+    borderBottomLeftRadius: 40, 
+    borderBottomRightRadius: 40 
   },
-  title: { fontSize: 28, fontWeight: '900' },
-  closeBtn: { padding: 8, backgroundColor: '#f0f0f0', borderRadius: 20 },
+  headerTop: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  closeBtn: { width: 40, height: 40, borderRadius: 12, backgroundColor: 'rgba(255,255,255,0.2)', alignItems: 'center', justifyContent: 'center' },
+  headerTitle: { fontSize: 20, fontWeight: '800', color: '#fff' },
+  headerSubtitle: { fontSize: 13, color: '#fff', opacity: 0.8, textAlign: 'center', marginTop: 8, letterSpacing: 1, textTransform: 'uppercase' },
 
-  amountSection: { alignItems: 'center', marginBottom: 32 },
+  scrollContent: { padding: 24 },
+  amountContainer: { alignItems: 'center', marginBottom: 32 },
   amountRow: { flexDirection: 'row', alignItems: 'center' },
-  currency: { fontSize: 32, fontWeight: '600', color: '#007AFF', marginRight: 8 },
-  amountInput: { fontSize: 64, fontWeight: '900', color: '#000', minWidth: 80, textAlign: 'center' },
-  titleInput: { fontSize: 18, color: '#666', marginTop: 10, fontWeight: '500' },
+  currencySymbol: { fontSize: 32, fontWeight: '700', color: '#6366f1', marginRight: 4, marginTop: 10 },
+  mainAmountInput: { fontSize: 64, fontWeight: '900', color: '#1E293B', minWidth: 100, textAlign: 'center' },
+  descriptionInput: { fontSize: 18, color: '#475569', marginTop: 8, fontWeight: '600', width: '100%', textAlign: 'center' },
 
-  modeContainer: { 
+  modeToggle: { 
     flexDirection: 'row', 
-    backgroundColor: '#F2F2F7', 
-    borderRadius: 16, 
-    padding: 4, 
+    backgroundColor: '#E2E8F0', 
+    borderRadius: 20, 
+    padding: 6, 
     marginBottom: 32 
   },
-  modeBtn: { flex: 1, paddingVertical: 12, alignItems: 'center', borderRadius: 12 },
-  modeBtnPaid: { backgroundColor: '#34C759' },
-  modeBtnOwe: { backgroundColor: '#FF3B30' },
-  modeText: { fontWeight: '700', color: '#8E8E93' },
-  textWhite: { color: '#fff' },
+  modeOption: { flex: 1, paddingVertical: 14, alignItems: 'center', borderRadius: 16 },
+  modeActive: { backgroundColor: '#fff', shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.1, shadowRadius: 4, elevation: 3 },
+  modeLabel: { fontWeight: '700', color: '#64748B', fontSize: 15 },
+  modeLabelActive: { color: '#6366f1' },
 
-  sectionLabel: { fontSize: 16, fontWeight: '700', color: '#8E8E93', marginBottom: 16, textAlign: 'center' },
+  sectionHeading: { fontSize: 11, fontWeight: '800', color: '#94A3B8', marginBottom: 16, letterSpacing: 1.5, textAlign: 'center' },
 
-  peopleGrid: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', gap: 12 },
+  grid: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', gap: 12 },
   personCard: { 
-    width: '30%', 
-    paddingVertical: 16, 
+    width: '31%', 
+    paddingVertical: 20, 
     alignItems: 'center', 
-    borderRadius: 20, 
-    backgroundColor: '#F9F9FB',
-    borderWidth: 1,
-    borderColor: '#EFEFEF'
-  },
-  cardActivePaid: { backgroundColor: '#34C759', borderColor: '#34C759' },
-  cardActiveOwe: { backgroundColor: '#FF3B30', borderColor: '#FF3B30' },
-  
-  avatar: { 
-    width: 48, 
-    height: 48, 
     borderRadius: 24, 
-    backgroundColor: '#E5E5EA', 
-    justifyContent: 'center', 
-    alignItems: 'center', 
-    marginBottom: 8 
+    backgroundColor: '#fff',
+    borderWidth: 1,
+    borderColor: '#F1F5F9',
+    position: 'relative'
   },
-  avatarActive: { backgroundColor: 'rgba(255,255,255,0.2)' },
-  avatarInitial: { fontSize: 18, fontWeight: '800', color: '#8E8E93' },
-  personName: { fontSize: 14, fontWeight: '600', color: '#333' },
+  personCardActive: { backgroundColor: '#6366f1', borderColor: '#6366f1' },
+  
+  avatarCircle: { width: 48, height: 48, borderRadius: 18, backgroundColor: '#F1F5F9', justifyContent: 'center', alignItems: 'center', marginBottom: 10 },
+  avatarCircleActive: { backgroundColor: 'rgba(255,255,255,0.25)' },
+  avatarInitial: { fontSize: 18, fontWeight: '800', color: '#64748B' },
+  personLabel: { fontSize: 13, fontWeight: '700', color: '#1E293B' },
+  checkIcon: { position: 'absolute', top: 8, right: 8 },
 
-  footer: { 
-    position: 'absolute', 
-    bottom: Platform.OS === 'ios' ? 40 : 20, 
-    left: 24, 
-    right: 24 
-  },
-  saveButton: { 
-    backgroundColor: '#000', 
-    paddingVertical: 18, 
-    borderRadius: 20, 
-    alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.2,
-    shadowRadius: 8,
-    elevation: 5
-  },
-  saveDisabled: { opacity: 0.3 },
-  saveButtonText: { color: '#fff', fontSize: 18, fontWeight: '800' },
+  footer: { position: 'absolute', bottom: Platform.OS === 'ios' ? 40 : 20, left: 24, right: 24 },
+  saveBtnWrapper: { borderRadius: 24, overflow: 'hidden', elevation: 8, shadowColor: '#6366f1', shadowOffset: { width: 0, height: 10 }, shadowOpacity: 0.3, shadowRadius: 15 },
+  saveGradient: { paddingVertical: 20, alignItems: 'center', justifyContent: 'center' },
+  saveBtnText: { color: '#fff', fontSize: 18, fontWeight: '800', letterSpacing: 0.5 },
 });

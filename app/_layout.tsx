@@ -60,8 +60,8 @@ function RootNavigator() {
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
         <Stack.Screen name="modal" options={{ presentation: 'modal', title: 'Modal' }} />
         <Stack.Screen name="journey/[id]" options={{ headerShown: false }} />
-        <Stack.Screen name="create-journey" options={{ title: 'Create Journey', presentation: 'modal' }} />
-        <Stack.Screen name="add-expense" options={{ title: 'Add Expense', presentation: 'modal' }} />
+        <Stack.Screen name="create-journey" options={{ headerShown: false }} />
+        <Stack.Screen name="add-expense" options={{ headerShown: false }} />
         <Stack.Screen name="edit-expense/[id]" options={{ title: 'Edit Expense', presentation: 'modal' }} />
         <Stack.Screen name="import-expenses" options={{ title: 'Import Expenses', presentation: 'modal' }} />
         <Stack.Screen name="add-member" options={{ title: 'Add Member', presentation: 'modal' }} />

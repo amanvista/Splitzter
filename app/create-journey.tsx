@@ -5,6 +5,7 @@ import { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
+  Platform,
   ScrollView,
   StyleSheet,
   Switch,
@@ -37,14 +38,12 @@ export default function CreateJourneyScreen() {
   
   const router = useRouter();
 
-  // Automatically add current user to participants
   useEffect(() => {
     if (currentUser && selectedParticipants.length === 0) {
       setSelectedParticipants([currentUser]);
     }
   }, [currentUser]);
 
-  // Load contacts only when the switch is toggled to improve initial performance
   useEffect(() => {
     if (showContacts && contacts.length === 0) {
       loadContacts();
@@ -66,7 +65,6 @@ export default function CreateJourneyScreen() {
     setFetchingContacts(true);
     try {
       const contactList = await getContacts();
-      // Sort alphabetically
       const sorted = contactList.sort((a, b) => a.name.localeCompare(b.name));
       setContacts(sorted);
       setFilteredContacts(sorted);
@@ -92,9 +90,8 @@ export default function CreateJourneyScreen() {
   const toggleParticipant = (person: Person) => {
     const isSelected = selectedParticipants.some(p => p.id === person.id);
     if (isSelected) {
-      // Prevent removing the current user
       if (currentUser && person.id === currentUser.id) {
-        Alert.alert('Cannot Remove', 'You cannot remove yourself from the journey');
+        Alert.alert('Cannot Remove', 'You cannot remove yourself');
         return;
       }
       setSelectedParticipants(selectedParticipants.filter(p => p.id !== person.id));
@@ -108,18 +105,13 @@ export default function CreateJourneyScreen() {
       Alert.alert('Error', 'Please enter a journey name');
       return;
     }
-    if (selectedParticipants.length === 0) {
-      Alert.alert('Error', 'Add at least one person to split with');
-      return;
-    }
-
     setLoading(true);
     try {
       const journey: Journey = {
         id: `journey_${Date.now()}`,
         name: journeyName.trim(),
         description: journeyDescription.trim(),
-        imageUrl: getRandomJourneyImage(), // Assign a random image
+        imageUrl: getRandomJourneyImage(),
         createdAt: new Date().toISOString(),
         participants: selectedParticipants,
       };
@@ -134,44 +126,54 @@ export default function CreateJourneyScreen() {
 
   return (
     <ThemedView style={styles.container}>
-      <LinearGradient colors={['#6366F1', '#8B5CF6']} style={styles.header}>
-        <ThemedText style={styles.headerTitle}>New Journey</ThemedText>
-        <ThemedText style={styles.headerSubtitle}>Who are you traveling with?</ThemedText>
+      {/* Premium Gradient Header */}
+      <LinearGradient colors={['#6366f1', '#8b5cf6', '#a855f7']} style={styles.header}>
+        <View style={styles.headerTop}>
+          <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
+            <Ionicons name="arrow-back" size={24} color="#fff" />
+          </TouchableOpacity>
+          <ThemedText style={styles.headerTitle}>New Journey</ThemedText>
+          <View style={{ width: 40 }} />
+        </View>
+        <ThemedText style={styles.headerSubtitle}>Set up your travel crew</ThemedText>
       </LinearGradient>
 
       <ScrollView 
         style={styles.content} 
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
+        contentContainerStyle={{ paddingBottom: 40 }}
       >
+        {/* Trip Details Card */}
         <View style={styles.card}>
-          <ThemedText style={styles.label}>Trip Details</ThemedText>
+          <ThemedText style={styles.label}>Trip Info</ThemedText>
           <TextInput
             style={styles.input}
             value={journeyName}
             onChangeText={setJourneyName}
-            placeholder="e.g. Goa Trip 2024"
+            placeholder="Goa Trip 2026..."
             placeholderTextColor="#94A3B8"
           />
           <TextInput
             style={[styles.input, styles.textArea]}
             value={journeyDescription}
             onChangeText={setJourneyDescription}
-            placeholder="What's the plan? (Optional)"
+            placeholder="Add a short description (optional)"
             placeholderTextColor="#94A3B8"
             multiline
           />
         </View>
 
+        {/* Add People Section */}
         <View style={styles.section}>
-          <ThemedText style={styles.label}>Add People</ThemedText>
+          <ThemedText style={styles.label}>Participants</ThemedText>
           
           <View style={styles.addCustomRow}>
             <TextInput
               style={styles.customInput}
               value={customName}
               onChangeText={setCustomName}
-              placeholder="Name"
+              placeholder="Add name manually..."
               placeholderTextColor="#94A3B8"
             />
             <TouchableOpacity style={styles.addBtn} onPress={addCustomParticipant}>
@@ -180,11 +182,11 @@ export default function CreateJourneyScreen() {
           </View>
 
           <View style={styles.toggleRow}>
-            <ThemedText style={styles.toggleText}>Import from contacts</ThemedText>
+            <ThemedText style={styles.toggleText}>Sync Phone Contacts</ThemedText>
             <Switch 
               value={showContacts} 
               onValueChange={setShowContacts}
-              trackColor={{ false: '#CBD5E1', true: '#A5B4FC' }}
+              trackColor={{ false: '#E2E8F0', true: '#C7D2FE' }}
               thumbColor={showContacts ? '#6366F1' : '#F8FAFC'}
             />
           </View>
@@ -195,7 +197,7 @@ export default function CreateJourneyScreen() {
               {selectedParticipants.map(p => (
                 <View key={p.id} style={styles.chip}>
                   <ThemedText style={styles.chipText}>{p.name}</ThemedText>
-                  <TouchableOpacity onPress={() => setSelectedParticipants(prev => prev.filter(x => x.id !== p.id))}>
+                  <TouchableOpacity onPress={() => toggleParticipant(p)}>
                     <Ionicons name="close-circle" size={18} color="#fff" />
                   </TouchableOpacity>
                 </View>
@@ -206,7 +208,7 @@ export default function CreateJourneyScreen() {
           {showContacts && (
             <View style={styles.contactsBox}>
               <View style={styles.searchBar}>
-                <Ionicons name="search" size={18} color="#64748B" />
+                <Ionicons name="search" size={18} color="#94A3B8" />
                 <TextInput 
                   placeholder="Search contacts..." 
                   style={styles.searchInput}
@@ -216,10 +218,10 @@ export default function CreateJourneyScreen() {
               </View>
               
               {fetchingContacts ? (
-                <ActivityIndicator style={{ margin: 20 }} color="#6366F1" />
+                <ActivityIndicator style={{ margin: 20 }} color="#8b5cf6" />
               ) : (
                 <View>
-                  {filteredContacts.slice(0, 15).map(item => {
+                  {filteredContacts.slice(0, 10).map(item => {
                     const isSelected = selectedParticipants.some(p => p.id === item.id);
                     return (
                       <TouchableOpacity 
@@ -228,24 +230,40 @@ export default function CreateJourneyScreen() {
                         onPress={() => toggleParticipant(item)}
                       >
                         <View style={[styles.avatar, isSelected && styles.avatarActive]}>
-                          <ThemedText style={styles.avatarText}>{item.name[0]}</ThemedText>
+                          <ThemedText style={[styles.avatarText, isSelected && { color: '#fff' }]}>
+                            {item.name[0]}
+                          </ThemedText>
                         </View>
-                        <ThemedText style={styles.contactName}>{item.name}</ThemedText>
-                        {isSelected && <Ionicons name="checkmark-circle" size={24} color="#10B981" />}
+                        <ThemedText style={[styles.contactName, isSelected && { fontWeight: '700' }]}>
+                          {item.name}
+                        </ThemedText>
+                        <Ionicons 
+                          name={isSelected ? "checkmark-circle" : "add-circle-outline"} 
+                          size={24} 
+                          color={isSelected ? "#6366F1" : "#CBD5E1"} 
+                        />
                       </TouchableOpacity>
                     );
                   })}
-                  {filteredContacts.length > 15 && (
-                    <ThemedText style={styles.limitText}>Keep typing to find more...</ThemedText>
-                  )}
                 </View>
               )}
             </View>
           )}
         </View>
 
+        {/* Floating Style Action Button */}
         <TouchableOpacity style={styles.mainBtn} onPress={createNewJourney} disabled={loading}>
-          {loading ? <ActivityIndicator color="#fff" /> : <ThemedText style={styles.mainBtnText}>Create Journey</ThemedText>}
+          <LinearGradient 
+            colors={['#6366f1', '#a855f7']} 
+            start={{x:0, y:0}} end={{x:1, y:0}}
+            style={styles.btnGradient}
+          >
+            {loading ? (
+              <ActivityIndicator color="#fff" />
+            ) : (
+              <ThemedText style={styles.mainBtnText}>Initialize Journey</ThemedText>
+            )}
+          </LinearGradient>
         </TouchableOpacity>
       </ScrollView>
     </ThemedView>
@@ -253,41 +271,62 @@ export default function CreateJourneyScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#F8FAFC' },
-  header: { paddingTop: 60, paddingBottom: 30, paddingHorizontal: 24, borderBottomLeftRadius: 32, borderBottomRightRadius: 32 },
-  headerTitle: { fontSize: 28, fontWeight: '800', color: '#fff' },
-  headerSubtitle: { fontSize: 16, color: '#fff', opacity: 0.8, marginTop: 4 },
+  container: { flex: 1, backgroundColor: '#F8F9FA' },
+  header: { 
+    paddingTop: Platform.OS === 'ios' ? 60 : 50, 
+    paddingBottom: 35, 
+    paddingHorizontal: 24, 
+    borderBottomLeftRadius: 40, 
+    borderBottomRightRadius: 40 
+  },
+  headerTop: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  backBtn: { width: 40, height: 40, borderRadius: 12, backgroundColor: 'rgba(255,255,255,0.2)', alignItems: 'center', justifyContent: 'center' },
+  headerTitle: { fontSize: 22, fontWeight: '800', color: '#fff', letterSpacing: 0.5 },
+  headerSubtitle: { fontSize: 14, color: '#fff', opacity: 0.8, marginTop: 8, textAlign: 'center' },
   
   content: { flex: 1, padding: 20 },
-  card: { backgroundColor: '#fff', borderRadius: 20, padding: 20, marginBottom: 24, elevation: 2, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.05, shadowRadius: 10 },
+  card: { 
+    backgroundColor: '#fff', 
+    borderRadius: 24, 
+    padding: 20, 
+    marginBottom: 24,
+    ...Platform.select({
+      ios: { shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.05, shadowRadius: 10 },
+      android: { elevation: 4 },
+    }),
+  },
   section: { marginBottom: 24 },
-  label: { fontSize: 14, fontWeight: '700', color: '#64748B', marginBottom: 12, textTransform: 'uppercase' },
+  label: { fontSize: 12, fontWeight: '800', color: '#94A3B8', marginBottom: 12, letterSpacing: 1.5, textTransform: 'uppercase' },
   
-  input: { backgroundColor: '#F1F5F9', borderRadius: 12, padding: 16, fontSize: 16, marginBottom: 12, color: '#1E293B' },
-  textArea: { height: 100, textAlignVertical: 'top' },
+  input: { backgroundColor: '#F8FAFC', borderRadius: 16, padding: 16, fontSize: 16, marginBottom: 12, color: '#1E293B', borderWidth: 1, borderColor: '#F1F5F9' },
+  textArea: { height: 80, textAlignVertical: 'top' },
   
   addCustomRow: { flexDirection: 'row', gap: 10, marginBottom: 16 },
-  customInput: { flex: 1, backgroundColor: '#F1F5F9', borderRadius: 12, padding: 16, fontSize: 16 },
-  addBtn: { backgroundColor: '#6366F1', width: 56, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
+  customInput: { flex: 1, backgroundColor: '#F8FAFC', borderRadius: 16, padding: 16, fontSize: 15, borderWidth: 1, borderColor: '#F1F5F9' },
+  addBtn: { backgroundColor: '#8b5cf6', width: 54, borderRadius: 16, alignItems: 'center', justifyContent: 'center' },
   
-  toggleRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 },
-  toggleText: { fontSize: 16, color: '#1E293B', fontWeight: '500' },
+  toggleRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16, paddingHorizontal: 4 },
+  toggleText: { fontSize: 15, color: '#475569', fontWeight: '600' },
   
   chipScroll: { marginBottom: 16 },
-  chip: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#6366F1', paddingHorizontal: 12, paddingVertical: 8, borderRadius: 20, marginRight: 8, gap: 6 },
-  chipText: { color: '#fff', fontWeight: '600' },
+  chip: { 
+    flexDirection: 'row', alignItems: 'center', backgroundColor: '#6366F1', 
+    paddingHorizontal: 14, paddingVertical: 10, borderRadius: 20, marginRight: 8, gap: 6,
+    shadowColor: '#6366F1', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 6,
+  },
+  chipText: { color: '#fff', fontWeight: '700', fontSize: 13 },
   
-  contactsBox: { backgroundColor: '#fff', borderRadius: 20, padding: 10, borderWidth: 1, borderColor: '#E2E8F0' },
-  searchBar: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#F1F5F9', borderRadius: 10, paddingHorizontal: 12, marginBottom: 10 },
-  searchInput: { flex: 1, padding: 10, fontSize: 14 },
+  contactsBox: { backgroundColor: '#fff', borderRadius: 24, padding: 12, borderWidth: 1, borderColor: '#F1F5F9' },
+  searchBar: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#F8FAFC', borderRadius: 14, paddingHorizontal: 12, marginBottom: 12 },
+  searchInput: { flex: 1, padding: 12, fontSize: 14 },
   
-  contactItem: { flexDirection: 'row', alignItems: 'center', padding: 12, borderBottomWidth: 1, borderBottomColor: '#F1F5F9' },
-  avatar: { width: 36, height: 36, borderRadius: 18, backgroundColor: '#E2E8F0', alignItems: 'center', justifyContent: 'center', marginRight: 12 },
+  contactItem: { flexDirection: 'row', alignItems: 'center', padding: 10, borderRadius: 16, marginBottom: 4 },
+  avatar: { width: 40, height: 40, borderRadius: 14, backgroundColor: '#F1F5F9', alignItems: 'center', justifyContent: 'center', marginRight: 12 },
   avatarActive: { backgroundColor: '#6366F1' },
-  avatarText: { fontWeight: '700', color: '#64748B' },
+  avatarText: { fontWeight: '800', color: '#94A3B8', fontSize: 16 },
   contactName: { flex: 1, fontSize: 15, color: '#1E293B' },
-  limitText: { textAlign: 'center', color: '#94A3B8', fontSize: 12, marginVertical: 10 },
 
-  mainBtn: { backgroundColor: '#6366F1', padding: 18, borderRadius: 16, alignItems: 'center', marginBottom: 40 },
-  mainBtnText: { color: '#fff', fontSize: 18, fontWeight: '700' }
+  mainBtn: { marginTop: 10, borderRadius: 20, overflow: 'hidden' },
+  btnGradient: { padding: 18, alignItems: 'center', justifyContent: 'center' },
+  mainBtnText: { color: '#fff', fontSize: 18, fontWeight: '800', letterSpacing: 0.5 }
 });
