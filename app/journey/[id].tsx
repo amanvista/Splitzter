@@ -7,9 +7,10 @@ import { ReminderModal } from '@/components/reminder-modal';
 import { ShareModal } from '@/components/share-modal';
 import { calculateJourneyBalance } from '@/lib/calculations';
 import { getJourneyImageUrl } from '@/lib/journey-images';
+import { createAllSettlementExpenses, createSettlementExpense } from '@/lib/settlement-utils';
 import { sendPaymentReminder, sendSettlementConfirmation } from '@/lib/whatsapp-reminders';
 import { useAppDispatch, useAppSelector } from '@/store';
-import { deleteExpenseThunk, loadExpensesForJourney, updateJourneyThunk } from '@/store/thunks';
+import { createExpenseThunk, deleteExpenseThunk, loadExpensesForJourney, updateJourneyThunk } from '@/store/thunks';
 import { Expense, Settlement } from '@/types';
 
 import { ActionButtons } from './ActionButtons';
@@ -23,8 +24,13 @@ export default function JourneyDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const dispatch = useAppDispatch();
   const journey = useAppSelector((state) => state.journey.currentJourney);
-  const expenses = useAppSelector((state) => 
-    id ? state.expense.expenses[id] || [] : []
+  
+  // Memoized selector to prevent unnecessary re-renders
+  const expenses = useAppSelector(
+    useCallback((state) => 
+      id ? state.expense.expenses[id] || [] : [], 
+      [id]
+    )
   );
   const [showShareModal, setShowShareModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
@@ -123,6 +129,70 @@ export default function JourneyDetailScreen() {
     await sendSettlementConfirmation(selectedSettlement, fromPerson, toPerson, journey.name);
   };
 
+  const handleSettlePayment = async (settlement: Settlement) => {
+    if (!journey || !id) return;
+    
+    const fromPerson = journey.participants.find(p => p.id === settlement.from);
+    const toPerson = journey.participants.find(p => p.id === settlement.to);
+    
+    if (!fromPerson || !toPerson) {
+      Alert.alert('Error', 'Could not find participant information');
+      return;
+    }
+    
+    Alert.alert(
+      'Settle Payment',
+      `Mark payment from ${fromPerson.name} to ${toPerson.name} (₹${settlement.amount.toLocaleString()}) as completed?`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Mark as Paid',
+          onPress: async () => {
+            try {
+              const settlementExpense = createSettlementExpense(settlement, journey, 'Payment settled');
+              await dispatch(createExpenseThunk(settlementExpense)).unwrap();
+              Alert.alert('Success', 'Payment has been marked as settled!');
+            } catch (error) {
+              Alert.alert('Error', 'Failed to settle payment');
+            }
+          }
+        }
+      ]
+    );
+  };
+
+  const handleSettleAll = async () => {
+    if (!journey || !id || !balance?.settlements.length) return;
+    
+    const totalAmount = balance.settlements.reduce((sum, s) => sum + s.amount, 0);
+    const settlementCount = balance.settlements.length;
+    
+    Alert.alert(
+      'Settle All Payments',
+      `This will mark all ${settlementCount} payments (₹${totalAmount.toLocaleString()} total) as completed and everyone will be settled up. Continue?`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Settle All',
+          onPress: async () => {
+            try {
+              const settlementExpenses = createAllSettlementExpenses(balance.settlements, journey);
+              
+              // Create all settlement expenses
+              for (const expense of settlementExpenses) {
+                await dispatch(createExpenseThunk(expense)).unwrap();
+              }
+              
+              Alert.alert('Success', 'All payments have been settled! Everyone is now even.');
+            } catch (error) {
+              Alert.alert('Error', 'Failed to settle all payments');
+            }
+          }
+        }
+      ]
+    );
+  };
+
   if (!journey) return null;
 
   const journeyImageUrl = getJourneyImageUrl(journey.id, journey.imageUrl);
@@ -154,6 +224,8 @@ export default function JourneyDetailScreen() {
               settlements={balance.settlements}
               getPersonName={getPersonName}
               onSendReminder={handleSendReminder}
+              onSettlePayment={handleSettlePayment}
+              onSettleAll={handleSettleAll}
             />
           )}
 

@@ -28,6 +28,7 @@ const CATEGORIES = [
   { id: 'Party', label: 'Party', icon: 'wine-outline' },
   { id: 'Activities', label: 'Activity', icon: 'ticket-outline' },
   { id: 'Shopping', label: 'Shopping', icon: 'cart-outline' },
+  { id: 'Settlement', label: 'Settlement', icon: 'checkmark-circle-outline' },
   { id: 'Other', label: 'Other', icon: 'ellipsis-horizontal-circle-outline' },
 ] as const;
 

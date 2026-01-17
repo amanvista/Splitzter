@@ -10,14 +10,25 @@ interface SettlementsSectionProps {
   settlements: Settlement[];
   getPersonName: (personId: string) => string;
   onSendReminder: (settlement: Settlement) => void;
+  onSettlePayment: (settlement: Settlement) => void;
+  onSettleAll: () => void;
 }
 
-export function SettlementsSection({ settlements, getPersonName, onSendReminder }: SettlementsSectionProps) {
+export function SettlementsSection({ settlements, getPersonName, onSendReminder, onSettlePayment, onSettleAll }: SettlementsSectionProps) {
   if (settlements.length === 0) return null;
 
   return (
     <View style={styles.section}>
-      <ThemedText style={styles.sectionHeader}>Suggested Payments</ThemedText>
+      <View style={styles.headerRow}>
+        <ThemedText style={styles.sectionHeader}>Suggested Payments</ThemedText>
+        <TouchableOpacity
+          style={styles.settleAllButton}
+          onPress={onSettleAll}
+        >
+          <Ionicons name="checkmark-circle-outline" size={16} color="#10B981" />
+          <ThemedText style={styles.settleAllText}>Settle All</ThemedText>
+        </TouchableOpacity>
+      </View>
       <View style={styles.settleBox}>
         {settlements.map((s: Settlement, i: number) => (
           <View key={i} style={styles.settleRow}>
@@ -31,12 +42,20 @@ export function SettlementsSection({ settlements, getPersonName, onSendReminder 
               </ThemedText>
               <ThemedText style={styles.settleAmount}>₹{s.amount.toLocaleString()}</ThemedText>
             </View>
-            <TouchableOpacity
-              style={styles.reminderButton}
-              onPress={() => onSendReminder(s)}
-            >
-              <Ionicons name="chatbubble-outline" size={16} color={THEME.primary} />
-            </TouchableOpacity>
+            <View style={styles.actionButtons}>
+              <TouchableOpacity
+                style={styles.settleButton}
+                onPress={() => onSettlePayment(s)}
+              >
+                <Ionicons name="checkmark" size={16} color="#10B981" />
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.reminderButton}
+                onPress={() => onSendReminder(s)}
+              >
+                <Ionicons name="chatbubble-outline" size={16} color={THEME.primary} />
+              </TouchableOpacity>
+            </View>
           </View>
         ))}
       </View>
@@ -46,11 +65,32 @@ export function SettlementsSection({ settlements, getPersonName, onSendReminder 
 
 const styles = StyleSheet.create({
   section: { marginBottom: 30 },
+  headerRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 15,
+  },
   sectionHeader: { 
     fontSize: 18, 
     fontWeight: '700', 
-    color: THEME.text, 
-    marginBottom: 15 
+    color: THEME.text,
+  },
+  settleAllButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    backgroundColor: '#D1FAE5',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#10B981',
+    gap: 4,
+  },
+  settleAllText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#10B981',
   },
   settleBox: { 
     backgroundColor: '#EEF2FF', 
@@ -86,6 +126,20 @@ const styles = StyleSheet.create({
     color: THEME.primary,
     marginTop: 2,
   },
+  actionButtons: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  settleButton: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: '#D1FAE5',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: '#10B981',
+  },
   reminderButton: {
     width: 32,
     height: 32,
@@ -93,7 +147,6 @@ const styles = StyleSheet.create({
     backgroundColor: '#F3F4F6',
     alignItems: 'center',
     justifyContent: 'center',
-    marginLeft: 8,
   },
   bold: { fontWeight: '700' },
 });

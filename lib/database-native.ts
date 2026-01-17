@@ -9,6 +9,23 @@ const initDB = () => {
   db = SQLite.openDatabaseSync('splitzter.db');
 };
 
+// Reset database (for development/debugging)
+export const resetDatabase = async () => {
+  try {
+    await db.execAsync(`
+      DROP TABLE IF EXISTS expense_splits;
+      DROP TABLE IF EXISTS expenses;
+      DROP TABLE IF EXISTS journey_participants;
+      DROP TABLE IF EXISTS people;
+      DROP TABLE IF EXISTS journeys;
+    `);
+    console.log('Database reset successfully');
+    await initDatabase();
+  } catch (error) {
+    console.error('Error resetting database:', error);
+  }
+};
+
 export const initDatabase = async () => {
   try {
     initDB();
@@ -21,7 +38,6 @@ export const initDatabase = async () => {
         id TEXT PRIMARY KEY NOT NULL,
         name TEXT NOT NULL,
         description TEXT,
-        image_url TEXT,
         created_at TEXT NOT NULL
       );
 
@@ -63,6 +79,14 @@ export const initDatabase = async () => {
       );
     `);
     
+    // Add image_url column if it doesn't exist (migration)
+    try {
+      await db.execAsync(`ALTER TABLE journeys ADD COLUMN image_url TEXT;`);
+    } catch (error) {
+      // Column already exists, ignore error
+      console.log('image_url column already exists or migration not needed');
+    }
+    
     console.log('Database initialized successfully');
   } catch (error) {
     console.error('Database initialization error:', error);
@@ -84,7 +108,22 @@ export const createJourney = async (journey: Journey): Promise<void> => {
     }
   } catch (error) {
     console.error('Error creating journey:', error);
-    throw error;
+    // Try without image_url for backward compatibility
+    try {
+      await db.runAsync(
+        'INSERT INTO journeys (id, name, description, created_at) VALUES (?, ?, ?, ?)',
+        [journey.id, journey.name, journey.description || '', journey.createdAt]
+      );
+      
+      // Add participants
+      for (const person of journey.participants) {
+        await savePerson(person);
+        await addParticipantToJourneyById(journey.id, person.id);
+      }
+    } catch (fallbackError) {
+      console.error('Fallback journey creation also failed:', fallbackError);
+      throw fallbackError;
+    }
   }
 };
 
@@ -99,7 +138,7 @@ export const getJourneys = async (): Promise<Journey[]> => {
         id: row.id,
         name: row.name,
         description: row.description,
-        imageUrl: row.image_url,
+        imageUrl: row.image_url || undefined,
         createdAt: row.created_at,
         participants
       });
@@ -127,7 +166,7 @@ export const getJourneyById = async (id: string): Promise<Journey | null> => {
       id: journey.id,
       name: journey.name,
       description: journey.description,
-      imageUrl: journey.image_url,
+      imageUrl: journey.image_url || undefined,
       createdAt: journey.created_at,
       participants
     };
@@ -145,7 +184,16 @@ export const updateJourney = async (journey: Journey): Promise<void> => {
     );
   } catch (error) {
     console.error('Error updating journey:', error);
-    throw error;
+    // Try without image_url for backward compatibility
+    try {
+      await db.runAsync(
+        'UPDATE journeys SET name = ?, description = ? WHERE id = ?',
+        [journey.name, journey.description || '', journey.id]
+      );
+    } catch (fallbackError) {
+      console.error('Fallback journey update also failed:', fallbackError);
+      throw fallbackError;
+    }
   }
 };
 

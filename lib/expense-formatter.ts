@@ -9,6 +9,13 @@ export const formatExpenseActivity = (
   const splitCount = expense.splitBetween.length;
   const totalParticipants = participants.length;
   
+  // Handle settlement expenses specially
+  if (expense.category === 'Settlement' || expense.title.startsWith('Settlement:')) {
+    const receiverName = getPersonName(expense.splitBetween[0]);
+    const amount = `₹${expense.amount.toLocaleString()}`;
+    return `${paidByName} settled ${amount} with ${receiverName}`;
+  }
+  
   // Determine split description
   let splitDescription: string;
   
