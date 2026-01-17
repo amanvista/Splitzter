@@ -63,6 +63,10 @@ export default function JourneyDetailScreen() {
     router.push(`/import-expenses?journeyId=${id}`);
   };
 
+  const handleAddMember = () => {
+    router.push(`/add-member?journeyId=${id}`);
+  };
+
   const handleEditExpense = (expenseId: string) => {
     router.push(`/edit-expense/${expenseId}`);
   };
@@ -89,6 +93,7 @@ export default function JourneyDetailScreen() {
           <ActionButtons
             onAddExpense={handleAddExpense}
             onImportExpenses={handleImportExpenses}
+            onAddMember={handleAddMember}
           />
 
           {balance?.settlements && (

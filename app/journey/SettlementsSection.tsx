@@ -24,7 +24,7 @@ export function SettlementsSection({ settlements, getPersonName }: SettlementsSe
               <Ionicons name="arrow-forward" size={14} color="#fff" />
             </View>
             <ThemedText style={styles.settleText}>
-              <ThemedText style={styles.bold}>{getPersonName(s.from)}</ThemedText> owes{' '}
+              <ThemedText style={styles.bold}>{getPersonName(s.from)}</ThemedText> pays{' '}
               <ThemedText style={styles.bold}>{getPersonName(s.to)}</ThemedText>
             </ThemedText>
             <ThemedText style={styles.settleAmount}>₹{s.amount.toLocaleString()}</ThemedText>

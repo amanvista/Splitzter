@@ -8,9 +8,10 @@ import { THEME } from './theme';
 interface ActionButtonsProps {
   onAddExpense: () => void;
   onImportExpenses: () => void;
+  onAddMember: () => void;
 }
 
-export function ActionButtons({ onAddExpense, onImportExpenses }: ActionButtonsProps) {
+export function ActionButtons({ onAddExpense, onImportExpenses, onAddMember }: ActionButtonsProps) {
   return (
     <View style={styles.actionRow}>
       <TouchableOpacity 
@@ -25,6 +26,12 @@ export function ActionButtons({ onAddExpense, onImportExpenses }: ActionButtonsP
         onPress={onImportExpenses}
       >
         <Ionicons name="scan-outline" size={20} color={THEME.primary} />
+      </TouchableOpacity>
+      <TouchableOpacity 
+        style={styles.btnSecondary}
+        onPress={onAddMember}
+      >
+        <Ionicons name="person-add-outline" size={20} color={THEME.primary} />
       </TouchableOpacity>
     </View>
   );

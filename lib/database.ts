@@ -47,6 +47,11 @@ export const getJourneyParticipants = async (journeyId: string): Promise<any[]> 
   return db.getJourneyParticipants(journeyId);
 };
 
+export const addParticipantToJourney = async (journeyId: string, participant: any): Promise<void> => {
+  const db = await getDBModule();
+  return db.addParticipantToJourney(journeyId, participant);
+};
+
 // Expense operations
 export const createExpense = async (expense: any): Promise<void> => {
   const db = await getDBModule();

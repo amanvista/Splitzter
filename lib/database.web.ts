@@ -1,13 +1,14 @@
 import { Expense, Journey, Person } from '../types';
 import {
-    createExpenseWeb,
-    createJourneyWeb,
-    deleteExpenseWeb,
-    getJourneyByIdWeb,
-    getJourneyExpensesWeb,
-    getJourneysWeb,
-    initWebStorage,
-    updateExpenseWeb,
+  addParticipantToJourneyWeb,
+  createExpenseWeb,
+  createJourneyWeb,
+  deleteExpenseWeb,
+  getJourneyByIdWeb,
+  getJourneyExpensesWeb,
+  getJourneysWeb,
+  initWebStorage,
+  updateExpenseWeb
 } from './storage-web';
 
 // Initialize database
@@ -36,6 +37,10 @@ export const savePerson = (person: Person): void => {
 export const getJourneyParticipants = (journeyId: string): Promise<Person[]> => {
   // This is handled in the web storage functions
   return Promise.resolve([]);
+};
+
+export const addParticipantToJourney = (journeyId: string, participant: Person): void => {
+  addParticipantToJourneyWeb(journeyId, participant);
 };
 
 // Expense operations

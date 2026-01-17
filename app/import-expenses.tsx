@@ -126,7 +126,7 @@ export default function ImportExpensesScreen() {
     <ThemedView style={styles.expenseCard}>
       <ThemedView style={styles.expenseHeader}>
         <ThemedText style={styles.expenseTitle}>{item.title}</ThemedText>
-        <ThemedText style={styles.expenseAmount}>${item.amount.toFixed(2)}</ThemedText>
+        <ThemedText style={styles.expenseAmount}>₹{item.amount.toFixed(2)}</ThemedText>
       </ThemedView>
       <ThemedText style={styles.expenseDetails}>
         Paid by: {getPersonName(item.paidBy)}

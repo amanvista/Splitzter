@@ -79,7 +79,7 @@ export const createJourney = async (journey: Journey): Promise<void> => {
     // Add participants
     for (const person of journey.participants) {
       await savePerson(person);
-      await addParticipantToJourney(journey.id, person.id);
+      await addParticipantToJourneyById(journey.id, person.id);
     }
   } catch (error) {
     console.error('Error creating journey:', error);
@@ -169,7 +169,24 @@ export const getJourneyParticipants = async (journeyId: string): Promise<Person[
   }
 };
 
-const addParticipantToJourney = async (journeyId: string, personId: string): Promise<void> => {
+export const addParticipantToJourney = async (journeyId: string, participant: Person): Promise<void> => {
+  try {
+    // First save the person if they don't exist
+    await savePerson(participant);
+    
+    // Then add them to the journey
+    await db.runAsync(
+      'INSERT OR IGNORE INTO journey_participants (journey_id, person_id) VALUES (?, ?)',
+      [journeyId, participant.id]
+    );
+  } catch (error) {
+    console.error('Error adding participant to journey:', error);
+    throw error;
+  }
+};
+
+// Helper function for internal use
+const addParticipantToJourneyById = async (journeyId: string, personId: string): Promise<void> => {
   try {
     await db.runAsync(
       'INSERT OR IGNORE INTO journey_participants (journey_id, person_id) VALUES (?, ?)',

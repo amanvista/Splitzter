@@ -1,12 +1,13 @@
 import { Expense, Journey, Person } from '@app-types';
 import {
-    createExpense as dbCreateExpense,
-    createJourney as dbCreateJourney,
-    deleteExpense as dbDeleteExpense,
-    getJourneyById as dbGetJourneyById,
-    getJourneyExpenses as dbGetJourneyExpenses,
-    getJourneys as dbGetJourneys,
-    updateExpense as dbUpdateExpense,
+  addParticipantToJourney as dbAddParticipantToJourney,
+  createExpense as dbCreateExpense,
+  createJourney as dbCreateJourney,
+  deleteExpense as dbDeleteExpense,
+  getJourneyById as dbGetJourneyById,
+  getJourneyExpenses as dbGetJourneyExpenses,
+  getJourneys as dbGetJourneys,
+  updateExpense as dbUpdateExpense
 } from '@lib/database';
 import { getCurrentUser, saveCurrentUser } from '@lib/user-storage';
 import { createAsyncThunk } from '@reduxjs/toolkit';
@@ -37,6 +38,15 @@ export const createJourney = createAsyncThunk('journey/create', async (journey: 
   await dbCreateJourney(journey);
   return journey;
 });
+
+export const addParticipantToJourneyThunk = createAsyncThunk(
+  'journey/addParticipant',
+  async ({ journeyId, participant }: { journeyId: string; participant: Person }) => {
+    await dbAddParticipantToJourney(journeyId, participant);
+    const updatedJourney = await dbGetJourneyById(journeyId);
+    return updatedJourney;
+  }
+);
 
 // Note: These thunks are commented out as the corresponding database functions
 // are not implemented. The app currently works without Redux state management.

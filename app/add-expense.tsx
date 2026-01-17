@@ -4,7 +4,6 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
 import {
-  ActivityIndicator,
   Alert,
   KeyboardAvoidingView,
   Platform,
@@ -12,14 +11,27 @@ import {
   StyleSheet,
   TextInput,
   TouchableOpacity,
-  View,
+  View
 } from 'react-native';
 
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { useAppDispatch, useAppSelector } from '@/store';
 import { createExpenseThunk } from '@/store/thunks';
-import { Expense, Person } from '@/types';
+import { Expense } from '@/types';
+
+// Define Categories
+const CATEGORIES = [
+  { id: 'Food', label: 'Food', icon: 'fast-food-outline' },
+  { id: 'Transport', label: 'Travel', icon: 'car-outline' },
+  { id: 'Stay', label: 'Stay', icon: 'bed-outline' },
+  { id: 'Party', label: 'Party', icon: 'wine-outline' },
+  { id: 'Activities', label: 'Activity', icon: 'ticket-outline' },
+  { id: 'Shopping', label: 'Shopping', icon: 'cart-outline' },
+  { id: 'Other', label: 'Other', icon: 'ellipsis-horizontal-circle-outline' },
+] as const;
+
+type SplitMode = 'everyone' | 'selective';
 
 export default function AddExpenseScreen() {
   const { journeyId } = useLocalSearchParams<{ journeyId: string }>();
@@ -29,55 +41,48 @@ export default function AddExpenseScreen() {
   
   const [title, setTitle] = useState('');
   const [amount, setAmount] = useState('');
-  const [isPaidByMe, setIsPaidByMe] = useState(true);
-  const [selected, setSelected] = useState<string[]>([]);
+  const [selectedCategory, setSelectedCategory] = useState<string>('Food');
+  const [paidBy, setPaidBy] = useState<string>(currentUser?.id || '');
+  const [splitMode, setSplitMode] = useState<SplitMode>('everyone');
+  const [selectedParticipants, setSelectedParticipants] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
 
   const router = useRouter();
 
   useEffect(() => {
-    if (journey && currentUser) {
-      setSelected(journey.participants.filter((p: Person) => p.id !== currentUser.id).map((p: Person) => p.id));
+    if (journey) {
+      setSelectedParticipants(journey.participants.map(p => p.id));
     }
-  }, [journey, currentUser]);
+  }, [journey]);
 
-  const toggleParticipant = (id: string) => {
+  const handleCategorySelect = (id: string) => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    if (!isPaidByMe) {
-      setSelected([id]);
-    } else {
-      setSelected(prev => prev.includes(id) ? prev.filter(p => p !== id) : [...prev, id]);
-    }
+    setSelectedCategory(id);
   };
 
-  const handleToggleMode = (mePaid: boolean) => {
-    Haptics.selectionAsync();
-    setIsPaidByMe(mePaid);
-    if (!mePaid && selected.length > 1) {
-      setSelected([selected[0]]);
-    }
+  const handleToggleParticipant = (id: string) => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    setSelectedParticipants(prev => 
+      prev.includes(id) ? prev.filter(p => p !== id) : [...prev, id]
+    );
+    setSplitMode('selective');
   };
 
   const save = async () => {
     if (!amount || parseFloat(amount) <= 0) {
-      Alert.alert('Invalid Amount', 'Please enter a valid amount.');
+      Alert.alert('Invalid Amount', 'Enter a valid amount');
       return;
     }
-    if (selected.length === 0) {
-      Alert.alert('Missing Info', 'Please select at least one person.');
-      return;
-    }
-
     setLoading(true);
     try {
       const expense: Expense = {
         id: `e_${Date.now()}`,
         journeyId: journeyId!,
-        title: title.trim() || (isPaidByMe ? 'Shared Expense' : 'Personal Debt'),
+        title: title.trim() || `${selectedCategory} Expense`,
         amount: parseFloat(amount),
-        paidBy: isPaidByMe ? currentUser!.id : selected[0],
-        splitBetween: isPaidByMe ? [currentUser!.id, ...selected] : [currentUser!.id, selected[0]],
-        category: 'General',
+        paidBy: paidBy,
+        splitBetween: selectedParticipants,
+        category: selectedCategory, // Saving the category here
         date: new Date().toISOString(),
         description: '',
       };
@@ -86,7 +91,7 @@ export default function AddExpenseScreen() {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       router.back();
     } catch (error) {
-      Alert.alert('Error', 'Failed to create expense');
+      Alert.alert('Error', 'Failed to save expense');
     } finally {
       setLoading(false);
     }
@@ -96,7 +101,6 @@ export default function AddExpenseScreen() {
 
   return (
     <ThemedView style={styles.container}>
-      {/* Brand Consistent Header */}
       <LinearGradient colors={['#6366f1', '#8b5cf6', '#a855f7']} style={styles.header}>
         <View style={styles.headerTop}>
           <TouchableOpacity onPress={() => router.back()} style={styles.closeBtn}>
@@ -105,20 +109,13 @@ export default function AddExpenseScreen() {
           <ThemedText style={styles.headerTitle}>Add Expense</ThemedText>
           <View style={{ width: 40 }} />
         </View>
-        <ThemedText style={styles.headerSubtitle}>{journey.name}</ThemedText>
       </LinearGradient>
 
-      <KeyboardAvoidingView 
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'} 
-        style={{ flex: 1 }}
-      >
-        <ScrollView 
-          contentContainerStyle={styles.scrollContent}
-          keyboardShouldPersistTaps="handled"
-          showsVerticalScrollIndicator={false}
-        >
-          {/* Hero Amount Input */}
-          <View style={styles.amountContainer}>
+      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1 }}>
+        <ScrollView contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
+          
+          {/* 1. Hero Amount & Name */}
+          <View style={styles.heroSection}>
             <View style={styles.amountRow}>
               <ThemedText style={styles.currencySymbol}>₹</ThemedText>
               <TextInput
@@ -127,59 +124,80 @@ export default function AddExpenseScreen() {
                 onChangeText={setAmount}
                 keyboardType="decimal-pad"
                 placeholder="0"
-                placeholderTextColor="#CBD5E1"
                 autoFocus
               />
             </View>
             <TextInput
               style={styles.descriptionInput}
               placeholder="What was this for?"
-              placeholderTextColor="#94A3B8"
               value={title}
               onChangeText={setTitle}
             />
           </View>
 
-          {/* Mode Switcher - Custom Styled */}
-          <View style={styles.modeToggle}>
+          {/* 2. Category Picker */}
+          <ThemedText style={styles.sectionHeading}>CATEGORY</ThemedText>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.horizontalPicker}>
+            {CATEGORIES.map((cat) => (
+              <TouchableOpacity 
+                key={cat.id} 
+                onPress={() => handleCategorySelect(cat.id)}
+                style={[styles.categoryChip, selectedCategory === cat.id && styles.activeCategoryChip]}
+              >
+                <Ionicons name={cat.icon} size={18} color={selectedCategory === cat.id ? '#fff' : '#64748B'} />
+                <ThemedText style={[styles.categoryText, selectedCategory === cat.id && styles.whiteText]}>
+                  {cat.label}
+                </ThemedText>
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
+
+          {/* 3. Paid By Selector */}
+          <ThemedText style={styles.sectionHeading}>PAID BY</ThemedText>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.horizontalPicker}>
+            {journey.participants.map(p => (
+              <TouchableOpacity 
+                key={p.id} 
+                onPress={() => { setPaidBy(p.id); Haptics.selectionAsync(); }}
+                style={[styles.payerChip, paidBy === p.id && styles.activePayerChip]}
+              >
+                <ThemedText style={[styles.payerText, paidBy === p.id && styles.whiteText]}>
+                  {p.id === currentUser?.id ? 'Me' : p.name.split(' ')[0]}
+                </ThemedText>
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
+
+          {/* 4. Split Mode & Grid */}
+          <ThemedText style={styles.sectionHeading}>SPLIT WITH</ThemedText>
+          <View style={styles.splitModeContainer}>
             <TouchableOpacity 
-              onPress={() => handleToggleMode(true)} 
-              style={[styles.modeOption, isPaidByMe && styles.modeActive]}
+              onPress={() => { setSplitMode('everyone'); setSelectedParticipants(journey.participants.map(p=>p.id)); }}
+              style={[styles.modeTab, splitMode === 'everyone' && styles.activeTab]}
             >
-              <ThemedText style={[styles.modeLabel, isPaidByMe && styles.modeLabelActive]}>I Paid</ThemedText>
+              <ThemedText style={[styles.tabText, splitMode === 'everyone' && styles.activeTabText]}>Everyone</ThemedText>
             </TouchableOpacity>
             <TouchableOpacity 
-              onPress={() => handleToggleMode(false)} 
-              style={[styles.modeOption, !isPaidByMe && styles.modeActive]}
+              onPress={() => setSplitMode('selective')}
+              style={[styles.modeTab, splitMode === 'selective' && styles.activeTab]}
             >
-              <ThemedText style={[styles.modeLabel, !isPaidByMe && styles.modeLabelActive]}>I Owe</ThemedText>
+              <ThemedText style={[styles.tabText, splitMode === 'selective' && styles.activeTabText]}>Selective</ThemedText>
             </TouchableOpacity>
           </View>
 
-          <ThemedText style={styles.sectionHeading}>
-            {isPaidByMe ? "SPLIT WITH" : "WHO DO YOU OWE?"}
-          </ThemedText>
-
-          {/* Modern Participant Grid */}
           <View style={styles.grid}>
-            {journey.participants.filter(p => p.id !== currentUser?.id).map(p => {
-              const isActive = selected.includes(p.id);
+            {journey.participants.map(p => {
+              const isActive = selectedParticipants.includes(p.id);
               return (
                 <TouchableOpacity 
                   key={p.id} 
-                  activeOpacity={0.7}
-                  style={[styles.personCard, isActive && styles.personCardActive]} 
-                  onPress={() => toggleParticipant(p.id)}
+                  style={[styles.personCard, isActive && styles.activeCard]} 
+                  onPress={() => handleToggleParticipant(p.id)}
                 >
-                  <View style={[styles.avatarCircle, isActive && styles.avatarCircleActive]}>
-                    <ThemedText style={[styles.avatarInitial, isActive && { color: '#fff' }]}>
-                      {p.name[0]}
-                    </ThemedText>
+                  <View style={[styles.avatar, isActive && styles.activeAvatar]}>
+                    <ThemedText style={[styles.avatarText, isActive && styles.whiteText]}>{p.name[0]}</ThemedText>
                   </View>
-                  <ThemedText style={[styles.personLabel, isActive && { color: '#fff' }]} numberOfLines={1}>
-                    {p.name.split(' ')[0]}
-                  </ThemedText>
-                  {isActive && <Ionicons name="checkmark-circle" size={16} color="#fff" style={styles.checkIcon} />}
+                  <ThemedText style={[styles.personName, isActive && styles.whiteText]} numberOfLines={1}>{p.name.split(' ')[0]}</ThemedText>
                 </TouchableOpacity>
               );
             })}
@@ -188,21 +206,10 @@ export default function AddExpenseScreen() {
           <View style={{ height: 120 }} />
         </ScrollView>
 
-        {/* Sticky Action Footer */}
         <View style={styles.footer}>
-          <TouchableOpacity onPress={save} disabled={loading || !amount} style={styles.saveBtnWrapper}>
-            <LinearGradient
-              colors={['#6366f1', '#a855f7']}
-              start={{x:0, y:0}} end={{x:1, y:0}}
-              style={[styles.saveGradient, (!amount || selected.length === 0) && { opacity: 0.5 }]}
-            >
-              {loading ? (
-                <ActivityIndicator color="#fff" />
-              ) : (
-                <ThemedText style={styles.saveBtnText}>
-                  Confirm ₹{amount || '0'}
-                </ThemedText>
-              )}
+          <TouchableOpacity onPress={save} style={styles.saveWrapper}>
+            <LinearGradient colors={['#6366f1', '#a855f7']} start={{x:0, y:0}} end={{x:1, y:0}} style={styles.saveBtn}>
+              <ThemedText style={styles.saveText}>Save ₹{amount || '0'}</ThemedText>
             </LinearGradient>
           </TouchableOpacity>
         </View>
@@ -213,60 +220,45 @@ export default function AddExpenseScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#F8F9FA' },
-  header: { 
-    paddingTop: Platform.OS === 'ios' ? 60 : 50, 
-    paddingBottom: 35, 
-    paddingHorizontal: 24, 
-    borderBottomLeftRadius: 40, 
-    borderBottomRightRadius: 40 
-  },
+  header: { paddingTop: 50, paddingBottom: 20, paddingHorizontal: 24, borderBottomLeftRadius: 30, borderBottomRightRadius: 30 },
   headerTop: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   closeBtn: { width: 40, height: 40, borderRadius: 12, backgroundColor: 'rgba(255,255,255,0.2)', alignItems: 'center', justifyContent: 'center' },
-  headerTitle: { fontSize: 20, fontWeight: '800', color: '#fff' },
-  headerSubtitle: { fontSize: 13, color: '#fff', opacity: 0.8, textAlign: 'center', marginTop: 8, letterSpacing: 1, textTransform: 'uppercase' },
-
-  scrollContent: { padding: 24 },
-  amountContainer: { alignItems: 'center', marginBottom: 32 },
-  amountRow: { flexDirection: 'row', alignItems: 'center' },
-  currencySymbol: { fontSize: 32, fontWeight: '700', color: '#6366f1', marginRight: 4, marginTop: 10 },
-  mainAmountInput: { fontSize: 64, fontWeight: '900', color: '#1E293B', minWidth: 100, textAlign: 'center' },
-  descriptionInput: { fontSize: 18, color: '#475569', marginTop: 8, fontWeight: '600', width: '100%', textAlign: 'center' },
-
-  modeToggle: { 
-    flexDirection: 'row', 
-    backgroundColor: '#E2E8F0', 
-    borderRadius: 20, 
-    padding: 6, 
-    marginBottom: 32 
-  },
-  modeOption: { flex: 1, paddingVertical: 14, alignItems: 'center', borderRadius: 16 },
-  modeActive: { backgroundColor: '#fff', shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.1, shadowRadius: 4, elevation: 3 },
-  modeLabel: { fontWeight: '700', color: '#64748B', fontSize: 15 },
-  modeLabelActive: { color: '#6366f1' },
-
-  sectionHeading: { fontSize: 11, fontWeight: '800', color: '#94A3B8', marginBottom: 16, letterSpacing: 1.5, textAlign: 'center' },
-
-  grid: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', gap: 12 },
-  personCard: { 
-    width: '31%', 
-    paddingVertical: 20, 
-    alignItems: 'center', 
-    borderRadius: 24, 
-    backgroundColor: '#fff',
-    borderWidth: 1,
-    borderColor: '#F1F5F9',
-    position: 'relative'
-  },
-  personCardActive: { backgroundColor: '#6366f1', borderColor: '#6366f1' },
+  headerTitle: { fontSize: 18, fontWeight: '800', color: '#fff' },
   
-  avatarCircle: { width: 48, height: 48, borderRadius: 18, backgroundColor: '#F1F5F9', justifyContent: 'center', alignItems: 'center', marginBottom: 10 },
-  avatarCircleActive: { backgroundColor: 'rgba(255,255,255,0.25)' },
-  avatarInitial: { fontSize: 18, fontWeight: '800', color: '#64748B' },
-  personLabel: { fontSize: 13, fontWeight: '700', color: '#1E293B' },
-  checkIcon: { position: 'absolute', top: 8, right: 8 },
+  scrollContent: { padding: 24 },
+  heroSection: { alignItems: 'center', marginBottom: 25 },
+  amountRow: { flexDirection: 'row', alignItems: 'center' },
+  currencySymbol: { fontSize: 32, fontWeight: '700', color: '#6366f1', marginRight: 4 },
+  mainAmountInput: { fontSize: 56, fontWeight: '900', color: '#1E293B', textAlign: 'center', minWidth: 100 },
+  descriptionInput: { fontSize: 18, color: '#475569', marginTop: 10, textAlign: 'center', fontWeight: '600' },
 
-  footer: { position: 'absolute', bottom: Platform.OS === 'ios' ? 40 : 20, left: 24, right: 24 },
-  saveBtnWrapper: { borderRadius: 24, overflow: 'hidden', elevation: 8, shadowColor: '#6366f1', shadowOffset: { width: 0, height: 10 }, shadowOpacity: 0.3, shadowRadius: 15 },
-  saveGradient: { paddingVertical: 20, alignItems: 'center', justifyContent: 'center' },
-  saveBtnText: { color: '#fff', fontSize: 18, fontWeight: '800', letterSpacing: 0.5 },
+  sectionHeading: { fontSize: 10, fontWeight: '800', color: '#94A3B8', marginBottom: 12, letterSpacing: 1.5, textTransform: 'uppercase' },
+  horizontalPicker: { marginBottom: 25, marginHorizontal: -24, paddingHorizontal: 24 },
+  categoryChip: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 16, paddingVertical: 10, borderRadius: 20, backgroundColor: '#E2E8F0', marginRight: 10, borderWidth: 1, borderColor: '#CBD5E1' },
+  activeCategoryChip: { backgroundColor: '#8b5cf6', borderColor: '#8b5cf6' },
+  categoryText: { fontWeight: '700', color: '#64748B', fontSize: 13 },
+
+  payerChip: { paddingHorizontal: 20, paddingVertical: 10, borderRadius: 20, backgroundColor: '#E2E8F0', marginRight: 10 },
+  activePayerChip: { backgroundColor: '#6366f1' },
+  payerText: { fontWeight: '700', color: '#64748B', fontSize: 13 },
+
+  splitModeContainer: { flexDirection: 'row', backgroundColor: '#E2E8F0', borderRadius: 15, padding: 4, marginBottom: 20 },
+  modeTab: { flex: 1, paddingVertical: 12, alignItems: 'center', borderRadius: 12 },
+  activeTab: { backgroundColor: '#fff' },
+  tabText: { fontWeight: '700', color: '#64748B', fontSize: 13 },
+  activeTabText: { color: '#6366f1' },
+
+  grid: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', gap: 10 },
+  personCard: { width: '31%', paddingVertical: 15, alignItems: 'center', borderRadius: 20, backgroundColor: '#fff', borderWidth: 1, borderColor: '#F1F5F9' },
+  activeCard: { backgroundColor: '#6366f1', borderColor: '#6366f1' },
+  avatar: { width: 40, height: 40, borderRadius: 14, backgroundColor: '#F1F5F9', justifyContent: 'center', alignItems: 'center', marginBottom: 8 },
+  activeAvatar: { backgroundColor: 'rgba(255,255,255,0.2)' },
+  avatarText: { fontWeight: '800', color: '#64748B' },
+  personName: { fontSize: 12, fontWeight: '700', color: '#1E293B' },
+  whiteText: { color: '#fff' },
+
+  footer: { position: 'absolute', bottom: 30, left: 24, right: 24 },
+  saveWrapper: { borderRadius: 20, overflow: 'hidden', elevation: 8, shadowColor: '#6366f1', shadowOpacity: 0.3, shadowRadius: 10 },
+  saveBtn: { paddingVertical: 20, alignItems: 'center' },
+  saveText: { color: '#fff', fontSize: 18, fontWeight: '800' }
 });

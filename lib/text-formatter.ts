@@ -46,14 +46,14 @@ export const formatDetailedJourneyReport = (
   lines.push(`Trip Name    : ${journey.name}`);
   lines.push(`Date         : ${new Date(journey.createdAt).toLocaleDateString()}`);
   lines.push(`Participants : ${journey.participants.map(p => p.name).join(', ')}`);
-  lines.push(`Currency     : USD ($)`);
+  lines.push(`Currency     : INR (₹)`);
   lines.push('-'.repeat(60));
   
   // [1] Financial Summary
   lines.push('[1] FINANCIAL SUMMARY');
   lines.push('-'.repeat(60));
-  lines.push(`TOTAL TRIP COST    : $${balance.totalExpenses.toFixed(2)}`);
-  lines.push(`COST PER PERSON    : $${(balance.totalExpenses / journey.participants.length).toFixed(2)}`);
+  lines.push(`TOTAL TRIP COST    : ₹${balance.totalExpenses.toFixed(2)}`);
+  lines.push(`COST PER PERSON    : ₹${(balance.totalExpenses / journey.participants.length).toFixed(2)}`);
   lines.push(`TOTAL TRANSACTIONS : ${expenses.length}`);
   lines.push('');
   
@@ -74,7 +74,7 @@ export const formatDetailedJourneyReport = (
       const icon = getCategoryIcon(category);
       const progressBar = generateProgressBar(percentage);
       const categoryName = category.toUpperCase().padEnd(8);
-      lines.push(`${icon} ${categoryName} : $${amount.toFixed(2).padStart(8)}  [${progressBar}] ${percentage.toFixed(0)}%`);
+      lines.push(`${icon} ${categoryName} : ₹${amount.toFixed(2).padStart(8)}  [${progressBar}] ${percentage.toFixed(0)}%`);
     });
   lines.push('');
   
@@ -90,15 +90,15 @@ export const formatDetailedJourneyReport = (
     // Person header with emoji
     const personEmoji = index === 0 ? '👤' : index === 1 ? '👩' : '👦';
     lines.push(`${personEmoji} ${person.name.toUpperCase()} (Payer ${String.fromCharCode(65 + index)})`);
-    lines.push(`- Total Paid: $${summary.totalPaid.toFixed(2)}`);
-    lines.push(`- Share: $${summary.totalShare.toFixed(2)} | Result: ${personalBalance < 0 ? '+' : ''}$${Math.abs(personalBalance).toFixed(2)} (${personalBalance < 0 ? 'Get Back' : 'Owes'})`);
+    lines.push(`- Total Paid: ₹${summary.totalPaid.toFixed(2)}`);
+    lines.push(`- Share: ₹${summary.totalShare.toFixed(2)} | Result: ${personalBalance < 0 ? '+' : ''}₹${Math.abs(personalBalance).toFixed(2)} (${personalBalance < 0 ? 'Get Back' : 'Owes'})`);
     lines.push('-'.repeat(55));
     
     // Personal expenses
     personalExpenses.forEach(expense => {
       const icon = getCategoryIcon(expense.category);
       const date = new Date(expense.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-      lines.push(`• $${expense.amount.toFixed(2).padStart(6)}  | ${date} | ${icon} ${expense.title}`);
+      lines.push(`• ₹${expense.amount.toFixed(2).padStart(6)}  | ${date} | ${icon} ${expense.title}`);
     });
     lines.push('');
   });
@@ -116,7 +116,7 @@ export const formatDetailedJourneyReport = (
       const toName = getPersonName(settlement.to, journey.participants);
       const fromEmoji = getPersonEmoji(settlement.from, journey.participants);
       const toEmoji = getPersonEmoji(settlement.to, journey.participants);
-      lines.push(`👉 ${fromEmoji} ${fromName.toUpperCase()}  pays  ${toEmoji} ${toName.toUpperCase()} : $${settlement.amount.toFixed(2)}`);
+      lines.push(`👉 ${fromEmoji} ${fromName.toUpperCase()}  pays  ${toEmoji} ${toName.toUpperCase()} : ₹${settlement.amount.toFixed(2)}`);
     });
   }
   lines.push('');
@@ -143,7 +143,7 @@ export const formatDetailedJourneyReport = (
       const date = new Date(expense.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
       const payer = getPersonName(expense.paidBy, journey.participants);
       const category = (expense.category || 'General').padEnd(9);
-      const amount = `$${expense.amount.toFixed(0)}`.padEnd(6);
+      const amount = `₹${expense.amount.toFixed(0)}`.padEnd(6);
       const description = expense.title.length > 18 ? expense.title.substring(0, 15) + '...' : expense.title;
       
       lines.push(`${id}  | ${date.padEnd(6)} | ${payer.padEnd(5)} | ${category} | ${amount} | ${description}`);
@@ -186,7 +186,7 @@ export const formatJourneyForSharing = (
   if (options.includeSummary) {
     lines.push('📊 SUMMARY');
     lines.push('─'.repeat(20));
-    lines.push(`💰 Total Expenses: $${balance.totalExpenses.toFixed(2)}`);
+    lines.push(`💰 Total Expenses: ₹${balance.totalExpenses.toFixed(2)}`);
     lines.push(`📋 Number of Expenses: ${expenses.length}`);
     lines.push(`👥 Participants: ${journey.participants.length}`);
     lines.push(`📅 Created: ${new Date(journey.createdAt).toLocaleDateString()}`);
@@ -205,7 +205,7 @@ export const formatJourneyForSharing = (
         .join(', ');
       
       lines.push(`${index + 1}. ${expense.title}`);
-      lines.push(`   💵 $${expense.amount.toFixed(2)}`);
+      lines.push(`   💵 ₹${expense.amount.toFixed(2)}`);
       lines.push(`   👤 Paid by: ${paidByName}`);
       lines.push(`   🔄 Split: ${splitNames}`);
       lines.push(`   📅 ${new Date(expense.date).toLocaleDateString()}`);
@@ -226,13 +226,13 @@ export const formatJourneyForSharing = (
       const balanceAmount = balance.balances[person.id] || 0;
       
       lines.push(`👤 ${person.name}`);
-      lines.push(`   💳 Paid: $${summary.totalPaid.toFixed(2)}`);
-      lines.push(`   🧾 Share: $${summary.totalShare.toFixed(2)}`);
+      lines.push(`   💳 Paid: ₹${summary.totalPaid.toFixed(2)}`);
+      lines.push(`   🧾 Share: ₹${summary.totalShare.toFixed(2)}`);
       
       if (balanceAmount > 0.01) {
-        lines.push(`   🔴 Owes: $${balanceAmount.toFixed(2)}`);
+        lines.push(`   🔴 Owes: ₹${balanceAmount.toFixed(2)}`);
       } else if (balanceAmount < -0.01) {
-        lines.push(`   🟢 Owed: $${Math.abs(balanceAmount).toFixed(2)}`);
+        lines.push(`   🟢 Owed: ₹${Math.abs(balanceAmount).toFixed(2)}`);
       } else {
         lines.push(`   ✅ All settled`);
       }
@@ -248,7 +248,7 @@ export const formatJourneyForSharing = (
     balance.settlements.forEach((settlement, index) => {
       const fromName = getPersonName(settlement.from, journey.participants);
       const toName = getPersonName(settlement.to, journey.participants);
-      lines.push(`${index + 1}. ${fromName} → ${toName}: $${settlement.amount.toFixed(2)}`);
+      lines.push(`${index + 1}. ${fromName} → ${toName}: ₹${settlement.amount.toFixed(2)}`);
     });
     lines.push('');
   }
@@ -278,14 +278,14 @@ export const formatExpenseListForSharing = (
     const paidByName = getPersonName(expense.paidBy, journey.participants);
     const splitAmount = expense.amount / expense.splitBetween.length;
     
-    lines.push(`${index + 1}. ${expense.title} - $${expense.amount.toFixed(2)}`);
+    lines.push(`${index + 1}. ${expense.title} - ₹${expense.amount.toFixed(2)}`);
     lines.push(`   Paid by ${paidByName}`);
-    lines.push(`   $${splitAmount.toFixed(2)} per person`);
+    lines.push(`   ₹${splitAmount.toFixed(2)} per person`);
     lines.push('');
   });
 
   const totalAmount = expenses.reduce((sum, exp) => sum + exp.amount, 0);
-  lines.push(`Total: $${totalAmount.toFixed(2)}`);
+  lines.push(`Total: ₹${totalAmount.toFixed(2)}`);
 
   return lines.join('\n');
 };
@@ -311,7 +311,7 @@ export const formatSettlementsForSharing = (
   balance.settlements.forEach((settlement, index) => {
     const fromName = getPersonName(settlement.from, journey.participants);
     const toName = getPersonName(settlement.to, journey.participants);
-    lines.push(`${index + 1}. ${fromName} pays ${toName} $${settlement.amount.toFixed(2)}`);
+    lines.push(`${index + 1}. ${fromName} pays ${toName} ₹${settlement.amount.toFixed(2)}`);
   });
 
   lines.push('');
@@ -344,21 +344,21 @@ export const formatPersonalSummaryForSharing = (
     lines.push('   No payments made');
   } else {
     personalExpenses.forEach(exp => {
-      lines.push(`   • ${exp.title}: $${exp.amount.toFixed(2)}`);
+      lines.push(`   • ${exp.title}: ₹${exp.amount.toFixed(2)}`);
     });
   }
-  lines.push(`   Total Paid: $${summary.totalPaid.toFixed(2)}`);
+  lines.push(`   Total Paid: ₹${summary.totalPaid.toFixed(2)}`);
   lines.push('');
 
   lines.push('🧾 Your Share:');
-  lines.push(`   Total Share: $${summary.totalShare.toFixed(2)}`);
+  lines.push(`   Total Share: ₹${summary.totalShare.toFixed(2)}`);
   lines.push('');
 
   lines.push('⚖️ Balance:');
   if (personalBalance > 0.01) {
-    lines.push(`   🔴 You owe: $${personalBalance.toFixed(2)}`);
+    lines.push(`   🔴 You owe: ₹${personalBalance.toFixed(2)}`);
   } else if (personalBalance < -0.01) {
-    lines.push(`   🟢 You are owed: $${Math.abs(personalBalance).toFixed(2)}`);
+    lines.push(`   🟢 You are owed: ₹${Math.abs(personalBalance).toFixed(2)}`);
   } else {
     lines.push(`   ✅ You're all settled!`);
   }

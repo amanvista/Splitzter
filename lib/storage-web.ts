@@ -45,7 +45,7 @@ export const createJourneyWeb = (journey: Journey): void => {
   // Add participants
   journey.participants.forEach(person => {
     savePersonWeb(person);
-    addParticipantToJourneyWeb(journey.id, person.id);
+    addParticipantToJourneyWeb(journey.id, person);
   });
   
   saveToStorage();
@@ -91,11 +91,20 @@ export const getJourneyParticipantsWeb = (journeyId: string): Person[] => {
   return people.filter(p => participantIds.includes(p.id));
 };
 
-const addParticipantToJourneyWeb = (journeyId: string, personId: string): void => {
-  const exists = journeyParticipants.some(jp => jp.journeyId === journeyId && jp.personId === personId);
-  if (!exists) {
-    journeyParticipants.push({ journeyId, personId });
+export const addParticipantToJourneyWeb = (journeyId: string, participant: Person): void => {
+  // First save the person if they don't exist
+  const existingPerson = people.find(p => p.id === participant.id);
+  if (!existingPerson) {
+    people.push(participant);
   }
+  
+  // Then add them to the journey if not already added
+  const exists = journeyParticipants.some(jp => jp.journeyId === journeyId && jp.personId === participant.id);
+  if (!exists) {
+    journeyParticipants.push({ journeyId, personId: participant.id });
+  }
+  
+  saveToStorage();
 };
 
 // Expense operations

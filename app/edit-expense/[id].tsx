@@ -346,7 +346,7 @@ export default function EditExpenseScreen() {
             <ThemedView style={styles.splitSummaryHeader}>
               <ThemedText style={styles.splitSummaryTitle}>Split Summary</ThemedText>
               <ThemedText style={styles.splitSummaryAmount}>
-                ${splitAmount.toFixed(2)} each
+                ₹{splitAmount.toFixed(2)} each
               </ThemedText>
             </ThemedView>
             <ThemedText style={styles.splitSummaryText}>
