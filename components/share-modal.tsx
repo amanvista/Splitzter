@@ -1,17 +1,21 @@
+import { Ionicons } from '@expo/vector-icons'; // Ensure you have icons installed
 import { LinearGradient } from 'expo-linear-gradient';
 import { useState } from 'react';
 import {
   Alert,
   Modal,
+  Platform,
   ScrollView,
   Share,
   StyleSheet,
   Switch,
   TouchableOpacity,
+  View,
 } from 'react-native';
 
 import { Colors } from '@/constants/colors';
 import {
+  formatDetailedJourneyReport,
   formatExpenseListForSharing,
   formatJourneyForSharing,
   formatSettlementsForSharing,
@@ -35,192 +39,139 @@ export function ShareModal({ visible, onClose, journey, expenses }: ShareModalPr
     includeSettlements: true,
     includeSummary: true,
   });
-  const [selectedFormat, setSelectedFormat] = useState<'full' | 'expenses' | 'settlements'>('full');
+  const [selectedFormat, setSelectedFormat] = useState<'detailed' | 'full' | 'expenses' | 'settlements'>('detailed');
 
   const generateShareText = () => {
     switch (selectedFormat) {
-      case 'expenses':
-        return formatExpenseListForSharing(journey, expenses);
-      case 'settlements':
-        return formatSettlementsForSharing(journey, expenses);
+      case 'detailed': return formatDetailedJourneyReport(journey, expenses);
+      case 'expenses': return formatExpenseListForSharing(journey, expenses);
+      case 'settlements': return formatSettlementsForSharing(journey, expenses);
       case 'full':
-      default:
-        return formatJourneyForSharing(journey, expenses, shareOptions);
+      default: return formatJourneyForSharing(journey, expenses, shareOptions);
     }
   };
 
   const handleShare = async () => {
     try {
       const shareText = generateShareText();
-      
-      const result = await Share.share({
+      await Share.share({
         message: shareText,
-        title: `${journey.name} - Expense Summary`,
+        title: `${journey.name} Report`,
       });
-
-      if (result.action === Share.sharedAction) {
-        onClose();
-      }
     } catch (error) {
-      Alert.alert('Error', 'Failed to share expense summary');
+      Alert.alert('Error', 'Failed to share');
     }
   };
 
   const copyToClipboard = async () => {
     try {
       const shareText = generateShareText();
-      // For web compatibility, we'll use the Share API or show an alert
-      if (navigator.clipboard) {
+      // For cross-platform support, we use the Share API as primary or clipboard if available
+      if (typeof navigator !== 'undefined' && navigator.clipboard) {
         await navigator.clipboard.writeText(shareText);
-        Alert.alert('Copied!', 'Expense summary copied to clipboard');
+        Alert.alert('Success', 'Copied to clipboard');
       } else {
-        // Fallback for mobile - use Share API
         await Share.share({ message: shareText });
       }
-      onClose();
-    } catch (error) {
-      Alert.alert('Error', 'Failed to copy to clipboard');
+    } catch (e) {
+      Alert.alert('Error', 'Clipboard not available');
     }
   };
 
   const formatOptions = [
-    { key: 'full', label: 'Complete Summary', description: 'All details including expenses, balances, and settlements' },
-    { key: 'expenses', label: 'Expense List Only', description: 'Just the list of expenses with amounts' },
-    { key: 'settlements', label: 'Settlements Only', description: 'Who owes whom and how much' },
+    { key: 'detailed', label: 'Detailed Report', icon: 'document-text-outline' },
+    { key: 'full', label: 'Complete Summary', icon: 'copy-outline' },
+    { key: 'expenses', label: 'Expense List', icon: 'list-outline' },
+    { key: 'settlements', label: 'Settlements', icon: 'people-outline' },
   ] as const;
 
   return (
     <Modal visible={visible} animationType="slide" presentationStyle="pageSheet">
       <ThemedView style={styles.container}>
-        <LinearGradient
-          colors={[Colors.gradientStart, Colors.gradientEnd]}
-          style={styles.header}
-        >
-          <ThemedView style={styles.headerContent}>
-            <TouchableOpacity onPress={onClose} style={styles.closeButton}>
-              <ThemedText style={styles.closeButtonText}>✕</ThemedText>
+        {/* Header Section */}
+        <LinearGradient colors={[Colors.primary, Colors.primaryLight]} style={styles.header}>
+          <View style={styles.headerTop}>
+            <TouchableOpacity onPress={onClose} style={styles.backButton}>
+              <Ionicons name="chevron-down" size={24} color={Colors.textInverse} />
             </TouchableOpacity>
-            <ThemedText style={styles.headerTitle}>Share Journey</ThemedText>
-            <ThemedView style={styles.placeholder} />
-          </ThemedView>
-          <ThemedText style={styles.headerSubtitle}>Export and share expense details</ThemedText>
+            <ThemedText style={styles.headerTitle}>Share Report</ThemedText>
+            <View style={{ width: 40 }} /> 
+          </View>
+          <ThemedText style={styles.headerDesc}>{journey.name}</ThemedText>
         </LinearGradient>
 
-        <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
-          <ThemedView style={styles.section}>
-            <ThemedText style={styles.sectionTitle}>Format Options</ThemedText>
+        <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
+          
+          {/* Format Selection - Horizontal or Grid for better UX */}
+          <ThemedText style={styles.sectionLabel}>Report Format</ThemedText>
+          <View style={styles.formatGrid}>
             {formatOptions.map((option) => (
               <TouchableOpacity
                 key={option.key}
-                style={[
-                  styles.formatOption,
-                  selectedFormat === option.key && styles.selectedFormatOption
-                ]}
                 onPress={() => setSelectedFormat(option.key)}
-                activeOpacity={0.7}
+                style={[
+                  styles.formatCard,
+                  selectedFormat === option.key && styles.activeFormatCard
+                ]}
               >
-                <ThemedView style={styles.formatOptionContent}>
-                  <ThemedView style={[
-                    styles.radioButton,
-                    selectedFormat === option.key && styles.selectedRadioButton
-                  ]}>
-                    {selectedFormat === option.key && (
-                      <ThemedView style={styles.radioButtonInner} />
-                    )}
-                  </ThemedView>
-                  <ThemedView style={styles.formatOptionText}>
-                    <ThemedText style={styles.formatOptionLabel}>{option.label}</ThemedText>
-                    <ThemedText style={styles.formatOptionDescription}>{option.description}</ThemedText>
-                  </ThemedView>
-                </ThemedView>
+                <Ionicons 
+                  name={option.icon} 
+                  size={24} 
+                  color={selectedFormat === option.key ? Colors.primary : Colors.textSecondary} 
+                />
+                <ThemedText style={[
+                  styles.formatLabel,
+                  selectedFormat === option.key && styles.activeFormatLabel
+                ]}>
+                  {option.label}
+                </ThemedText>
               </TouchableOpacity>
             ))}
+          </View>
+
+          {/* Preview Section */}
+          <ThemedText style={styles.sectionLabel}>Preview</ThemedText>
+          <ThemedView style={styles.previewCard}>
+            <ScrollView nestedScrollEnabled style={styles.previewInnerScroll}>
+              <ThemedText style={styles.previewText}>{generateShareText()}</ThemedText>
+            </ScrollView>
           </ThemedView>
 
+          {/* Conditional Controls for 'Full' */}
           {selectedFormat === 'full' && (
-            <ThemedView style={styles.section}>
-              <ThemedText style={styles.sectionTitle}>Include Details</ThemedText>
-              
-              <ThemedView style={styles.optionRow}>
-                <ThemedText style={styles.optionLabel}>Summary Statistics</ThemedText>
-                <Switch
-                  value={shareOptions.includeSummary}
-                  onValueChange={(value: boolean) => setShareOptions(prev => ({ ...prev, includeSummary: value }))}
-                  trackColor={{ false: Colors.border, true: Colors.primaryLight }}
-                  thumbColor={shareOptions.includeSummary ? Colors.primary : Colors.textLight}
-                />
-              </ThemedView>
-
-              <ThemedView style={styles.optionRow}>
-                <ThemedText style={styles.optionLabel}>Expense List</ThemedText>
-                <Switch
-                  value={shareOptions.includeExpenses}
-                  onValueChange={(value: boolean) => setShareOptions(prev => ({ ...prev, includeExpenses: value }))}
-                  trackColor={{ false: Colors.border, true: Colors.primaryLight }}
-                  thumbColor={shareOptions.includeExpenses ? Colors.primary : Colors.textLight}
-                />
-              </ThemedView>
-
-              <ThemedView style={styles.optionRow}>
-                <ThemedText style={styles.optionLabel}>Individual Balances</ThemedText>
-                <Switch
-                  value={shareOptions.includeBalances}
-                  onValueChange={(value: boolean) => setShareOptions(prev => ({ ...prev, includeBalances: value }))}
-                  trackColor={{ false: Colors.border, true: Colors.primaryLight }}
-                  thumbColor={shareOptions.includeBalances ? Colors.primary : Colors.textLight}
-                />
-              </ThemedView>
-
-              <ThemedView style={styles.optionRow}>
-                <ThemedText style={styles.optionLabel}>Settlement Suggestions</ThemedText>
-                <Switch
-                  value={shareOptions.includeSettlements}
-                  onValueChange={(value: boolean) => setShareOptions(prev => ({ ...prev, includeSettlements: value }))}
-                  trackColor={{ false: Colors.border, true: Colors.primaryLight }}
-                  thumbColor={shareOptions.includeSettlements ? Colors.primary : Colors.textLight}
-                />
-              </ThemedView>
+            <ThemedView style={styles.configSection}>
+              <ThemedText style={styles.sectionLabel}>Customize Content</ThemedText>
+              {[
+                { label: 'Summary', key: 'includeSummary' },
+                { label: 'Expenses', key: 'includeExpenses' },
+                { label: 'Balances', key: 'includeBalances' },
+                { label: 'Settlements', key: 'includeSettlements' }
+              ].map((opt) => (
+                <View key={opt.key} style={styles.switchRow}>
+                  <ThemedText style={styles.switchLabel}>{opt.label}</ThemedText>
+                  <Switch
+                    value={shareOptions[opt.key as keyof ShareOptions]}
+                    onValueChange={(val) => setShareOptions(prev => ({ ...prev, [opt.key]: val }))}
+                    trackColor={{ true: Colors.primaryLight }}
+                    thumbColor={shareOptions[opt.key as keyof ShareOptions] ? Colors.primary : '#f4f3f4'}
+                  />
+                </View>
+              ))}
             </ThemedView>
           )}
 
-          <ThemedView style={styles.section}>
-            <ThemedText style={styles.sectionTitle}>Preview</ThemedText>
-            <ThemedView style={styles.previewContainer}>
-              <ScrollView style={styles.previewScroll} showsVerticalScrollIndicator={false}>
-                <ThemedText style={styles.previewText}>{generateShareText()}</ThemedText>
-              </ScrollView>
-            </ThemedView>
-          </ThemedView>
-
-          <ThemedView style={styles.buttonContainer}>
-            <TouchableOpacity
-              style={styles.shareButton}
-              onPress={handleShare}
-              activeOpacity={0.8}
-            >
-              <LinearGradient
-                colors={[Colors.primary, Colors.primaryLight]}
-                style={styles.buttonGradient}
-              >
-                <ThemedText style={styles.buttonIcon}>📱</ThemedText>
-                <ThemedText style={styles.buttonText}>Share via WhatsApp</ThemedText>
-              </LinearGradient>
+          {/* Action Buttons */}
+          <View style={styles.actionContainer}>
+            <TouchableOpacity style={styles.primaryBtn} onPress={handleShare}>
+              <Ionicons name="share-social" size={20} color={Colors.textInverse} style={{ marginRight: 8 }} />
+              <ThemedText style={styles.primaryBtnText}>Share Report</ThemedText>
             </TouchableOpacity>
-
-            <TouchableOpacity
-              style={styles.copyButton}
-              onPress={copyToClipboard}
-              activeOpacity={0.8}
-            >
-              <LinearGradient
-                colors={[Colors.secondary, Colors.secondaryDark]}
-                style={styles.buttonGradient}
-              >
-                <ThemedText style={styles.buttonIcon}>📋</ThemedText>
-                <ThemedText style={styles.buttonText}>Copy to Clipboard</ThemedText>
-              </LinearGradient>
+            
+            <TouchableOpacity style={styles.secondaryBtn} onPress={copyToClipboard}>
+              <Ionicons name="clipboard-outline" size={20} color={Colors.primary} style={{ marginRight: 8 }} />
+              <ThemedText style={styles.secondaryBtnText}>Copy Text</ThemedText>
             </TouchableOpacity>
-          </ThemedView>
+          </View>
         </ScrollView>
       </ThemedView>
     </Modal>
@@ -228,166 +179,57 @@ export function ShareModal({ visible, onClose, journey, expenses }: ShareModalPr
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: Colors.background,
-  },
+  container: { flex: 1, backgroundColor: '#F8F9FA' },
   header: {
-    paddingTop: 60,
-    paddingBottom: 30,
-    paddingHorizontal: 24,
-    borderBottomLeftRadius: 24,
-    borderBottomRightRadius: 24,
-  },
-  headerContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: 8,
-  },
-  closeButton: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  closeButtonText: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: Colors.textInverse,
-  },
-  headerTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: Colors.textInverse,
-  },
-  placeholder: {
-    width: 32,
-  },
-  headerSubtitle: {
-    fontSize: 14,
-    color: Colors.textInverse,
-    opacity: 0.9,
-    textAlign: 'center',
-  },
-  content: {
-    flex: 1,
-    paddingHorizontal: 20,
     paddingTop: 20,
+    paddingBottom: 25,
+    paddingHorizontal: 20,
+    borderBottomLeftRadius: 30,
+    borderBottomRightRadius: 30,
   },
-  section: {
-    marginBottom: 24,
+  headerTop: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  backButton: { 
+    width: 40, height: 40, borderRadius: 20, 
+    backgroundColor: 'rgba(255,255,255,0.2)', alignItems: 'center', justifyContent: 'center' 
   },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: Colors.text,
-    marginBottom: 16,
+  headerTitle: { fontSize: 22, fontWeight: '800', color: Colors.textInverse },
+  headerDesc: { 
+    fontSize: 14, color: Colors.textInverse, opacity: 0.8, 
+    textAlign: 'center', marginTop: 10, fontWeight: '500' 
   },
-  formatOption: {
-    backgroundColor: Colors.surface,
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 12,
-    borderWidth: 2,
-    borderColor: Colors.border,
+  scrollContent: { padding: 20 },
+  sectionLabel: { fontSize: 16, fontWeight: '700', marginBottom: 12, color: Colors.textSecondary, textTransform: 'uppercase', letterSpacing: 1 },
+  formatGrid: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', marginBottom: 25 },
+  formatCard: {
+    width: '48%', backgroundColor: Colors.surface, padding: 16, borderRadius: 16, 
+    alignItems: 'center', marginBottom: 12, borderWidth: 1, borderColor: '#eee',
+    // Shadow
+    shadowColor: "#000", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.05, shadowRadius: 3.84, elevation: 2,
   },
-  selectedFormatOption: {
-    borderColor: Colors.primary,
-    backgroundColor: Colors.surfaceSecondary,
+  activeFormatCard: { borderColor: Colors.primary, backgroundColor: '#F0F7FF' },
+  formatLabel: { marginTop: 8, fontSize: 14, fontWeight: '600', textAlign: 'center' },
+  activeFormatLabel: { color: Colors.primary },
+  previewCard: {
+    backgroundColor: '#1e1e1e', borderRadius: 16, height: 200, marginBottom: 25,
+    padding: 2, overflow: 'hidden'
   },
-  formatOptionContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
+  previewInnerScroll: { padding: 15 },
+  previewText: { fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace', color: '#00FF41', fontSize: 12 },
+  configSection: { marginBottom: 25 },
+  switchRow: { 
+    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', 
+    backgroundColor: Colors.surface, padding: 12, borderRadius: 12, marginBottom: 8 
   },
-  radioButton: {
-    width: 20,
-    height: 20,
-    borderRadius: 10,
-    borderWidth: 2,
-    borderColor: Colors.border,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: 12,
+  switchLabel: { fontSize: 15, fontWeight: '500' },
+  actionContainer: { marginTop: 10, marginBottom: 40 },
+  primaryBtn: {
+    backgroundColor: Colors.primary, flexDirection: 'row', padding: 18, 
+    borderRadius: 16, alignItems: 'center', justifyContent: 'center', marginBottom: 12
   },
-  selectedRadioButton: {
-    borderColor: Colors.primary,
+  primaryBtnText: { color: Colors.textInverse, fontSize: 18, fontWeight: '700' },
+  secondaryBtn: {
+    borderWidth: 2, borderColor: Colors.primary, flexDirection: 'row', 
+    padding: 16, borderRadius: 16, alignItems: 'center', justifyContent: 'center'
   },
-  radioButtonInner: {
-    width: 10,
-    height: 10,
-    borderRadius: 5,
-    backgroundColor: Colors.primary,
-  },
-  formatOptionText: {
-    flex: 1,
-  },
-  formatOptionLabel: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: Colors.text,
-    marginBottom: 4,
-  },
-  formatOptionDescription: {
-    fontSize: 14,
-    color: Colors.textSecondary,
-    lineHeight: 20,
-  },
-  optionRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: Colors.borderLight,
-  },
-  optionLabel: {
-    fontSize: 16,
-    color: Colors.text,
-  },
-  previewContainer: {
-    backgroundColor: Colors.surface,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: Colors.border,
-    height: 200,
-  },
-  previewScroll: {
-    padding: 16,
-  },
-  previewText: {
-    fontSize: 12,
-    color: Colors.textSecondary,
-    fontFamily: 'monospace',
-    lineHeight: 16,
-  },
-  buttonContainer: {
-    marginBottom: 32,
-  },
-  shareButton: {
-    marginBottom: 12,
-    borderRadius: 12,
-    overflow: 'hidden',
-  },
-  copyButton: {
-    borderRadius: 12,
-    overflow: 'hidden',
-  },
-  buttonGradient: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 16,
-  },
-  buttonIcon: {
-    fontSize: 18,
-    marginRight: 8,
-  },
-  buttonText: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: Colors.textInverse,
-  },
+  secondaryBtnText: { color: Colors.primary, fontSize: 16, fontWeight: '700' }
 });
