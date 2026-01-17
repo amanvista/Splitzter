@@ -2,18 +2,22 @@ import { Ionicons } from '@expo/vector-icons';
 import { StyleSheet, TouchableOpacity, View } from 'react-native';
 
 import { ThemedText } from '@/components/themed-text';
-import { Expense } from '@/types';
+import { formatExpenseActivity } from '@/lib/expense-formatter';
+import { Expense, Person } from '@/types';
 
 import { THEME } from './theme';
 
 interface ExpenseItemProps {
   expense: Expense;
+  participants: Person[];
   getPersonName: (personId: string) => string;
   onPress: () => void;
   onDelete: () => void;
 }
 
-export function ExpenseItem({ expense, getPersonName, onPress, onDelete }: ExpenseItemProps) {
+export function ExpenseItem({ expense, participants, getPersonName, onPress, onDelete }: ExpenseItemProps) {
+  const activityText = formatExpenseActivity(expense, participants, getPersonName);
+  
   return (
     <View style={styles.expenseWrapper}>
       <TouchableOpacity
@@ -25,21 +29,15 @@ export function ExpenseItem({ expense, getPersonName, onPress, onDelete }: Expen
           <Ionicons name="card-outline" size={20} color={THEME.primary} />
         </View>
         <View style={styles.expenseMain}>
-          <ThemedText style={styles.expenseTitle} numberOfLines={1}>
-            {expense.title}
-          </ThemedText>
-          <ThemedText style={styles.expenseSub}>
-            Paid by {getPersonName(expense.paidBy)}
-          </ThemedText>
-        </View>
-        <View style={styles.expenseRight}>
-          <ThemedText style={styles.expenseAmount}>
-            ₹{expense.amount.toLocaleString()}
+          <ThemedText style={styles.expenseTitle} numberOfLines={2}>
+            {activityText}
           </ThemedText>
           <ThemedText style={styles.expenseDate}>
             {new Date(expense.date).toLocaleDateString(undefined, { 
               month: 'short', 
-              day: 'numeric' 
+              day: 'numeric',
+              hour: '2-digit',
+              minute: '2-digit'
             })}
           </ThemedText>
         </View>
@@ -83,11 +81,8 @@ const styles = StyleSheet.create({
     marginRight: 15 
   },
   expenseMain: { flex: 1 },
-  expenseTitle: { fontSize: 15, fontWeight: '700', color: THEME.text },
-  expenseSub: { fontSize: 12, color: THEME.textMuted, marginTop: 3 },
-  expenseRight: { alignItems: 'flex-end' },
-  expenseAmount: { fontSize: 16, fontWeight: '700', color: THEME.text },
-  expenseDate: { fontSize: 10, color: THEME.textMuted, marginTop: 4 },
+  expenseTitle: { fontSize: 14, fontWeight: '600', color: THEME.text, lineHeight: 20 },
+  expenseDate: { fontSize: 11, color: THEME.textMuted, marginTop: 6 },
   deleteBtn: { 
     width: 48, 
     height: 56, 

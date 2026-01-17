@@ -17,7 +17,7 @@ import {
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { useAppDispatch, useAppSelector } from '@/store';
-import { createExpenseThunk } from '@/store/thunks';
+import { createExpenseThunk, updateExpenseThunk } from '@/store/thunks';
 import { Expense } from '@/types';
 
 // Define Categories
@@ -34,10 +34,17 @@ const CATEGORIES = [
 type SplitMode = 'everyone' | 'selective';
 
 export default function AddExpenseScreen() {
-  const { journeyId } = useLocalSearchParams<{ journeyId: string }>();
+  const { journeyId, expenseId } = useLocalSearchParams<{ journeyId: string; expenseId?: string }>();
   const dispatch = useAppDispatch();
   const journey = useAppSelector((state) => state.journey.currentJourney);
   const currentUser = useAppSelector((state) => state.user.currentUser);
+  const expenses = useAppSelector((state) => 
+    journeyId ? state.expense.expenses[journeyId] || [] : []
+  );
+  
+  // Check if we're editing an existing expense
+  const isEditing = !!expenseId;
+  const existingExpense = isEditing ? expenses.find(e => e.id === expenseId) : null;
   
   const [title, setTitle] = useState('');
   const [amount, setAmount] = useState('');
@@ -49,11 +56,23 @@ export default function AddExpenseScreen() {
 
   const router = useRouter();
 
+  // Load existing expense data when editing
   useEffect(() => {
-    if (journey) {
+    if (existingExpense) {
+      setTitle(existingExpense.title);
+      setAmount(existingExpense.amount.toString());
+      setSelectedCategory(existingExpense.category || 'Food');
+      setPaidBy(existingExpense.paidBy);
+      setSelectedParticipants(existingExpense.splitBetween);
+      setSplitMode(existingExpense.splitBetween.length === journey?.participants.length ? 'everyone' : 'selective');
+    }
+  }, [existingExpense, journey]);
+
+  useEffect(() => {
+    if (journey && !isEditing) {
       setSelectedParticipants(journey.participants.map(p => p.id));
     }
-  }, [journey]);
+  }, [journey, isEditing]);
 
   const handleCategorySelect = (id: string) => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -75,23 +94,40 @@ export default function AddExpenseScreen() {
     }
     setLoading(true);
     try {
-      const expense: Expense = {
-        id: `e_${Date.now()}`,
-        journeyId: journeyId!,
-        title: title.trim() || `${selectedCategory} Expense`,
-        amount: parseFloat(amount),
-        paidBy: paidBy,
-        splitBetween: selectedParticipants,
-        category: selectedCategory, // Saving the category here
-        date: new Date().toISOString(),
-        description: '',
-      };
+      if (isEditing && existingExpense) {
+        // Update existing expense
+        const updatedExpense: Expense = {
+          ...existingExpense,
+          title: title.trim() || `${selectedCategory} Expense`,
+          amount: parseFloat(amount),
+          paidBy: paidBy,
+          splitBetween: selectedParticipants,
+          category: selectedCategory,
+          description: existingExpense.description || '',
+        };
 
-      await dispatch(createExpenseThunk(expense)).unwrap();
+        await dispatch(updateExpenseThunk(updatedExpense)).unwrap();
+      } else {
+        // Create new expense
+        const expense: Expense = {
+          id: `e_${Date.now()}`,
+          journeyId: journeyId!,
+          title: title.trim() || `${selectedCategory} Expense`,
+          amount: parseFloat(amount),
+          paidBy: paidBy,
+          splitBetween: selectedParticipants,
+          category: selectedCategory,
+          date: new Date().toISOString(),
+          description: '',
+        };
+
+        await dispatch(createExpenseThunk(expense)).unwrap();
+      }
+      
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       router.back();
     } catch (error) {
-      Alert.alert('Error', 'Failed to save expense');
+      Alert.alert('Error', `Failed to ${isEditing ? 'update' : 'save'} expense`);
     } finally {
       setLoading(false);
     }
@@ -106,7 +142,7 @@ export default function AddExpenseScreen() {
           <TouchableOpacity onPress={() => router.back()} style={styles.closeBtn}>
             <Ionicons name="close" size={24} color="#fff" />
           </TouchableOpacity>
-          <ThemedText style={styles.headerTitle}>Add Expense</ThemedText>
+          <ThemedText style={styles.headerTitle}>{isEditing ? 'Edit Expense' : 'Add Expense'}</ThemedText>
           <View style={{ width: 40 }} />
         </View>
       </LinearGradient>
@@ -209,7 +245,7 @@ export default function AddExpenseScreen() {
         <View style={styles.footer}>
           <TouchableOpacity onPress={save} style={styles.saveWrapper}>
             <LinearGradient colors={['#6366f1', '#a855f7']} start={{x:0, y:0}} end={{x:1, y:0}} style={styles.saveBtn}>
-              <ThemedText style={styles.saveText}>Save ₹{amount || '0'}</ThemedText>
+              <ThemedText style={styles.saveText}>{isEditing ? 'Update' : 'Save'} ₹{amount || '0'}</ThemedText>
             </LinearGradient>
           </TouchableOpacity>
         </View>

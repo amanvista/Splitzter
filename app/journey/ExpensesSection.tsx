@@ -1,13 +1,14 @@
 import { Alert, StyleSheet, View } from 'react-native';
 
 import { ThemedText } from '@/components/themed-text';
-import { Expense } from '@/types';
+import { Expense, Person } from '@/types';
 
 import { ExpenseItem } from './ExpenseItem';
 import { THEME } from './theme';
 
 interface ExpensesSectionProps {
   expenses: Expense[];
+  participants: Person[];
   getPersonName: (personId: string) => string;
   onEditExpense: (expenseId: string) => void;
   onDeleteExpense: (expense: Expense) => void;
@@ -15,6 +16,7 @@ interface ExpensesSectionProps {
 
 export function ExpensesSection({ 
   expenses, 
+  participants,
   getPersonName, 
   onEditExpense, 
   onDeleteExpense 
@@ -46,6 +48,7 @@ export function ExpensesSection({
           <ExpenseItem
             key={expense.id}
             expense={expense}
+            participants={participants}
             getPersonName={getPersonName}
             onPress={() => onEditExpense(expense.id)}
             onDelete={() => confirmDelete(expense)}

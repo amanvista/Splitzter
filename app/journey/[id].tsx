@@ -74,7 +74,7 @@ export default function JourneyDetailScreen() {
   };
 
   const handleEditExpense = (expenseId: string) => {
-    router.push(`/edit-expense/${expenseId}`);
+    router.push(`/add-expense?journeyId=${id}&expenseId=${expenseId}`);
   };
 
   const handleEditJourney = async (name: string, description: string) => {
@@ -164,6 +164,7 @@ export default function JourneyDetailScreen() {
 
           <ExpensesSection
             expenses={expenses}
+            participants={journey.participants}
             getPersonName={getPersonName}
             onEditExpense={handleEditExpense}
             onDeleteExpense={handleDeleteExpense}

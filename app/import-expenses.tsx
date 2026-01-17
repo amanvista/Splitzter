@@ -13,6 +13,7 @@ import {
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { Colors } from '@/constants/colors';
+import { formatExpenseActivity } from '@/lib/expense-formatter';
 import { getExampleText, ParsedExpense, parseExpenseText } from '@/lib/text-parser';
 import { useAppDispatch, useAppSelector } from '@/store';
 import { createExpenseThunk } from '@/store/thunks';
@@ -122,23 +123,31 @@ export default function ImportExpensesScreen() {
     return journey.participants.find(p => p.id === personId)?.name || 'Unknown';
   };
 
-  const renderParsedExpense = ({ item, index }: { item: ParsedExpense; index: number }) => (
-    <ThemedView style={styles.expenseCard}>
-      <ThemedView style={styles.expenseHeader}>
-        <ThemedText style={styles.expenseTitle}>{item.title}</ThemedText>
-        <ThemedText style={styles.expenseAmount}>₹{item.amount.toFixed(2)}</ThemedText>
+  const renderParsedExpense = ({ item, index }: { item: ParsedExpense; index: number }) => {
+    if (!journey) return null;
+    
+    // Convert ParsedExpense to Expense format for the formatter
+    const expenseForFormat = {
+      ...item,
+      date: new Date().toISOString(),
+      journeyId: journey.id,
+      id: `temp_${index}`,
+      description: item.description || '',
+    };
+    
+    const activityText = formatExpenseActivity(expenseForFormat, journey.participants, getPersonName);
+    
+    return (
+      <ThemedView style={styles.expenseCard}>
+        <ThemedView style={styles.expenseHeader}>
+          <ThemedText style={styles.expenseTitle}>{activityText}</ThemedText>
+        </ThemedView>
+        {item.description && (
+          <ThemedText style={styles.expenseDescription}>{item.description}</ThemedText>
+        )}
       </ThemedView>
-      <ThemedText style={styles.expenseDetails}>
-        Paid by: {getPersonName(item.paidBy)}
-      </ThemedText>
-      <ThemedText style={styles.expenseDetails}>
-        Split between: {item.splitBetween.map(id => getPersonName(id)).join(', ')}
-      </ThemedText>
-      {item.description && (
-        <ThemedText style={styles.expenseDescription}>{item.description}</ThemedText>
-      )}
-    </ThemedView>
-  );
+    );
+  };
 
   const renderError = ({ item, index }: { item: string; index: number }) => (
     <ThemedView style={styles.errorCard}>
@@ -453,10 +462,10 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   expenseTitle: {
-    fontSize: 16,
+    fontSize: 14,
     fontWeight: '600',
     color: Colors.text,
-    flex: 1,
+    lineHeight: 20,
   },
   expenseAmount: {
     fontSize: 16,
