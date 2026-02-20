@@ -2,13 +2,24 @@ import { Platform } from 'react-native';
 
 // Platform-specific database imports
 let dbModule: any = null;
+let forceWebStorage = false;
 
 const getDBModule = async () => {
   if (!dbModule) {
-    if (Platform.OS === 'web') {
+    if (Platform.OS === 'web' || forceWebStorage) {
+      console.log('Using web storage database');
       dbModule = await import('./database.web');
     } else {
-      dbModule = await import('./database-native');
+      try {
+        console.log('Attempting to use native SQLite database');
+        dbModule = await import('./database-native');
+        // Test if native database works
+        await dbModule.initDatabase();
+      } catch (error) {
+        console.error('Native database failed, switching to web storage:', error);
+        forceWebStorage = true;
+        dbModule = await import('./database.web');
+      }
     }
   }
   return dbModule;

@@ -1,29 +1,13 @@
 import * as SQLite from 'expo-sqlite';
 import { Expense, Journey, Person } from '../types';
 
+
 let db: SQLite.SQLiteDatabase;
 
 // Initialize database
 const initDB = () => {
   // Use openDatabaseSync instead of openDatabase
   db = SQLite.openDatabaseSync('splitzter.db');
-};
-
-// Reset database (for development/debugging)
-export const resetDatabase = async () => {
-  try {
-    await db.execAsync(`
-      DROP TABLE IF EXISTS expense_splits;
-      DROP TABLE IF EXISTS expenses;
-      DROP TABLE IF EXISTS journey_participants;
-      DROP TABLE IF EXISTS people;
-      DROP TABLE IF EXISTS journeys;
-    `);
-    console.log('Database reset successfully');
-    await initDatabase();
-  } catch (error) {
-    console.error('Error resetting database:', error);
-  }
 };
 
 export const initDatabase = async () => {
@@ -87,9 +71,10 @@ export const initDatabase = async () => {
       console.log('image_url column already exists or migration not needed');
     }
     
-    console.log('Database initialized successfully');
+    console.log('Native SQLite database initialized successfully');
   } catch (error) {
-    console.error('Database initialization error:', error);
+    console.error('Native SQLite database initialization error:', error);
+    throw error;
   }
 };
 
