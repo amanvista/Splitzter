@@ -3,6 +3,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { Platform, StyleSheet, TouchableOpacity, View } from 'react-native';
 
 import { ThemedText } from '@/components/themed-text';
+import { Colors, Theme } from '@/constants/theme';
 
 interface HomeHeaderProps {
   onAddJourney: () => void;
@@ -12,23 +13,21 @@ interface HomeHeaderProps {
 export function HomeHeader({ onAddJourney, isLoading }: HomeHeaderProps) {
   return (
     <LinearGradient
-      // Using the same indigo-to-purple logic from your JourneyHeader
-      colors={['#6366f1', '#8b5cf6', '#a855f7']}
+      colors={[Colors.light.gradientStart, Colors.light.gradientMid, Colors.light.gradientEnd]}
       start={{ x: 0, y: 0 }}
       end={{ x: 1, y: 1 }}
       style={styles.header}
     >
       <View style={styles.topRow}>
         <View>
-          <ThemedText style={styles.brandName}>SPLITZTER</ThemedText>
+          <ThemedText style={styles.brandName}>{Theme.branding.appNameShort.toUpperCase()}</ThemedText>
           <ThemedText style={styles.headerSubtitle}>
-            {isLoading ? 'Syncing data...' : 'Travel. Split. Settle.'}
+            {isLoading ? 'Syncing data...' : Theme.branding.tagline}
           </ThemedText>
         </View>
         
-        {/* Profile or Icon Placeholder to balance the top row */}
         <TouchableOpacity style={styles.profileIcon}>
-           <Ionicons name="person-circle-outline" size={32} color="#fff" />
+           <ThemedText style={styles.logoIcon}>{Theme.branding.logo}</ThemedText>
         </TouchableOpacity>
       </View>
 
@@ -92,6 +91,9 @@ const styles = StyleSheet.create({
   },
   profileIcon: {
     opacity: 0.9,
+  },
+  logoIcon: {
+    fontSize: 32,
   },
   glassAddButton: {
     borderRadius: 20,

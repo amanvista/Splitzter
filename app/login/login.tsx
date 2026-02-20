@@ -12,7 +12,7 @@ import {
 
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
-import { Colors } from '@/constants/colors';
+import { Colors, Theme } from '@/constants/theme';
 import { saveCurrentUser } from '@/lib/user-storage';
 
 export default function LoginScreen() {
@@ -57,15 +57,15 @@ export default function LoginScreen() {
       style={styles.container}
     >
       <LinearGradient
-        colors={[Colors.gradientStart, Colors.gradientEnd]}
+        colors={[Colors.light.gradientStart, Colors.light.gradientMid, Colors.light.gradientEnd]}
         style={styles.gradient}
       >
         <ThemedView style={styles.content}>
           <ThemedView style={styles.header}>
-            <ThemedText style={styles.logo}>💰</ThemedText>
-            <ThemedText style={styles.title}>Splitzter</ThemedText>
+            <ThemedText style={styles.logo}>{Theme.branding.logo}</ThemedText>
+            <ThemedText style={styles.title}>{Theme.branding.appName}</ThemedText>
             <ThemedText style={styles.subtitle}>
-              Split expenses with friends easily
+              {Theme.branding.tagline}
             </ThemedText>
           </ThemedView>
 
@@ -75,7 +75,7 @@ export default function LoginScreen() {
               <TextInput
                 style={styles.input}
                 placeholder="Enter username"
-                placeholderTextColor={Colors.textLight}
+                placeholderTextColor={Colors.light.textLight}
                 value={username}
                 onChangeText={setUsername}
                 autoCapitalize="none"
@@ -90,7 +90,7 @@ export default function LoginScreen() {
               <TextInput
                 style={styles.input}
                 placeholder="Enter password"
-                placeholderTextColor={Colors.textLight}
+                placeholderTextColor={Colors.light.textLight}
                 value={password}
                 onChangeText={setPassword}
                 secureTextEntry
@@ -147,14 +147,15 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   title: {
-    fontSize: 42,
+    fontSize: 38,
     fontWeight: 'bold',
-    color: Colors.textInverse,
+    color: Colors.light.textInverse,
     marginBottom: 8,
+    textAlign: 'center',
   },
   subtitle: {
     fontSize: 16,
-    color: Colors.textInverse,
+    color: Colors.light.textInverse,
     opacity: 0.9,
     textAlign: 'center',
   },
@@ -168,7 +169,7 @@ const styles = StyleSheet.create({
   label: {
     fontSize: 18,
     fontWeight: '600',
-    color: Colors.textInverse,
+    color: Colors.light.textInverse,
     marginBottom: 12,
   },
   input: {
@@ -177,16 +178,16 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingVertical: 16,
     fontSize: 16,
-    color: Colors.text,
+    color: Colors.light.text,
     borderWidth: 2,
     borderColor: 'transparent',
   },
   button: {
-    backgroundColor: Colors.secondary,
+    backgroundColor: Colors.light.secondary,
     borderRadius: 12,
     paddingVertical: 16,
     alignItems: 'center',
-    shadowColor: Colors.shadow,
+    shadowColor: Colors.light.shadow,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 8,
@@ -198,7 +199,7 @@ const styles = StyleSheet.create({
   buttonText: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: Colors.textInverse,
+    color: Colors.light.textInverse,
   },
   footer: {
     marginTop: 60,
@@ -207,7 +208,7 @@ const styles = StyleSheet.create({
   },
   footerText: {
     fontSize: 14,
-    color: Colors.textInverse,
+    color: Colors.light.textInverse,
     opacity: 0.8,
   },
 });

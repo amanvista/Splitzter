@@ -1,11 +1,11 @@
 {
   "expo": {
-    "name": "Splitzter",
-    "slug": "Splitzter",
+    "name": "BlinkFeast CounterPro",
+    "slug": "blinkfeast-counterpro",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
-    "scheme": "splitzter",
+    "scheme": "blinkfeast",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "ios": {
