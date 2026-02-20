@@ -38,9 +38,7 @@ export default function LoginScreen() {
       await saveCurrentUser({
         id: 'admin_user',
         name: 'Admin',
-        phone: '',
-        email: '',
-        isFromContacts: false,
+        role: 'admin',
       });
 
       router.replace('/(tabs)');

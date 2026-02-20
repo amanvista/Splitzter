@@ -1,9 +1,9 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { Person } from '../types';
+import { User } from '../types';
 
-const CURRENT_USER_KEY = '@splitzter_current_user';
+const CURRENT_USER_KEY = '@blinkfeast_current_user';
 
-export const saveCurrentUser = async (user: Person): Promise<void> => {
+export const saveCurrentUser = async (user: User): Promise<void> => {
   try {
     await AsyncStorage.setItem(CURRENT_USER_KEY, JSON.stringify(user));
   } catch (error) {
@@ -12,7 +12,7 @@ export const saveCurrentUser = async (user: Person): Promise<void> => {
   }
 };
 
-export const getCurrentUser = async (): Promise<Person | null> => {
+export const getCurrentUser = async (): Promise<User | null> => {
   try {
     const userJson = await AsyncStorage.getItem(CURRENT_USER_KEY);
     if (!userJson) {

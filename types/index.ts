@@ -1,41 +1,60 @@
-export interface Person {
+// BlinkFeast CounterPro - POS Types
+
+export interface User {
   id: string;
   name: string;
-  phone?: string;
-  email?: string;
-  isFromContacts: boolean;
+  role: 'admin' | 'waiter' | 'chef' | 'cashier';
 }
 
-export interface Journey {
+export interface MenuItem {
   id: string;
   name: string;
+  category: string;
+  price: number;
+  available: boolean;
+  image?: string;
   description?: string;
-  imageUrl?: string;
+}
+
+export interface Table {
+  id: string;
+  number: number;
+  seats: number;
+  status: 'available' | 'occupied' | 'reserved';
+  section: string;
+  currentOrderId?: string;
+}
+
+export interface OrderItem {
+  menuItemId: string;
+  name: string;
+  quantity: number;
+  price: number;
+  notes?: string;
+}
+
+export interface Order {
+  id: string;
+  orderNumber: string;
+  tableId: string;
+  tableNumber: number;
+  items: OrderItem[];
+  total: number;
+  status: 'pending' | 'preparing' | 'ready' | 'served' | 'completed';
   createdAt: string;
-  participants: Person[];
+  updatedAt: string;
+  paymentMethod?: 'cash' | 'card' | 'upi';
 }
 
-export interface Expense {
-  id: string;
-  journeyId: string;
-  title: string;
-  amount: number;
-  paidBy: string; // Person ID
-  splitBetween: string[]; // Array of Person IDs
-  category?: string;
+export interface DailySummary {
   date: string;
-  description?: string;
-}
-
-export interface Settlement {
-  from: string; // Person ID
-  to: string; // Person ID
-  amount: number;
-}
-
-export interface JourneyBalance {
-  journeyId: string;
-  totalExpenses: number;
-  balances: { [personId: string]: number }; // positive = owes money, negative = owed money
-  settlements: Settlement[];
+  totalSales: number;
+  totalOrders: number;
+  totalCustomers: number;
+  averageOrderValue: number;
+  paymentBreakdown: {
+    cash: number;
+    card: number;
+    upi: number;
+  };
 }
