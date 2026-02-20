@@ -16,13 +16,19 @@ import { Colors } from '@/constants/colors';
 import { saveCurrentUser } from '@/lib/user-storage';
 
 export default function LoginScreen() {
-  const [name, setName] = useState('');
+  const [username, setUsername] = useState('');
+  const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const router = useRouter();
 
   const handleLogin = async () => {
-    if (!name.trim()) {
-      Alert.alert('Error', 'Please enter your name');
+    if (!username.trim() || !password.trim()) {
+      Alert.alert('Error', 'Please enter username and password');
+      return;
+    }
+
+    if (username !== 'admin' || password !== 'admin') {
+      Alert.alert('Error', 'Invalid username or password');
       return;
     }
 
@@ -30,8 +36,8 @@ export default function LoginScreen() {
 
     try {
       await saveCurrentUser({
-        id: `user_${Date.now()}`,
-        name: name.trim(),
+        id: 'admin_user',
+        name: 'Admin',
         phone: '',
         email: '',
         isFromContacts: false,
@@ -65,15 +71,31 @@ export default function LoginScreen() {
 
           <ThemedView style={styles.form}>
             <ThemedView style={styles.inputContainer}>
-              <ThemedText style={styles.label}>What's your name?</ThemedText>
+              <ThemedText style={styles.label}>Username</ThemedText>
               <TextInput
                 style={styles.input}
-                placeholder="Enter your name"
+                placeholder="Enter username"
                 placeholderTextColor={Colors.textLight}
-                value={name}
-                onChangeText={setName}
-                autoCapitalize="words"
+                value={username}
+                onChangeText={setUsername}
+                autoCapitalize="none"
+                autoCorrect={false}
                 autoFocus
+                returnKeyType="next"
+              />
+            </ThemedView>
+
+            <ThemedView style={styles.inputContainer}>
+              <ThemedText style={styles.label}>Password</ThemedText>
+              <TextInput
+                style={styles.input}
+                placeholder="Enter password"
+                placeholderTextColor={Colors.textLight}
+                value={password}
+                onChangeText={setPassword}
+                secureTextEntry
+                autoCapitalize="none"
+                autoCorrect={false}
                 returnKeyType="done"
                 onSubmitEditing={handleLogin}
               />
@@ -86,7 +108,7 @@ export default function LoginScreen() {
               activeOpacity={0.8}
             >
               <ThemedText style={styles.buttonText}>
-                {loading ? 'Getting Started...' : 'Get Started'}
+                {loading ? 'Logging in...' : 'Login'}
               </ThemedText>
             </TouchableOpacity>
           </ThemedView>

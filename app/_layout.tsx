@@ -11,7 +11,7 @@ import { loadCurrentUser } from '@store/thunks';
 import { useColorScheme } from '../hooks/use-color-scheme';
 
 export const unstable_settings = {
-  anchor: '(tabs)',
+  initialRouteName: 'login',
 };
 
 function RootNavigator() {
@@ -29,25 +29,32 @@ function RootNavigator() {
         const result = await store.dispatch(loadCurrentUser());
         const user = result.payload;
         
-        // Check if we're in the auth group
-        const inAuthGroup = segments[0] === 'login';
+        setIsReady(true);
         
-        if (!user && !inAuthGroup) {
-          // User not logged in, redirect to login
-          router.replace('/login');
-        } else if (user && inAuthGroup) {
-          // User logged in but on login screen, redirect to home
-          router.replace('/(tabs)');
-        }
+        // Navigate after component is ready
+        setTimeout(() => {
+          const inAuthGroup = segments[0] === 'login';
+          
+          if (!user && !inAuthGroup) {
+            // User not logged in, redirect to login
+            router.replace('/login/login');
+          } else if (user && inAuthGroup) {
+            // User logged in but on login screen, redirect to home
+            router.replace('/(tabs)');
+          } else if (!user) {
+            // No user and not on login, go to login
+            router.replace('/login/login');
+          }
+        }, 100);
       } catch (error) {
         console.error('Initialization error:', error);
-      } finally {
         setIsReady(true);
+        router.replace('/login/login');
       }
     };
 
     initialize();
-  }, [segments]);
+  }, []);
 
   if (!isReady) {
     return null;
@@ -55,15 +62,15 @@ function RootNavigator() {
 
   return (
     <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-      <Stack>
-        <Stack.Screen name="login" options={{ headerShown: false }} />
-        <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-        <Stack.Screen name="modal" options={{ presentation: 'modal', title: 'Modal' }} />
-        <Stack.Screen name="journey/[id]" options={{ headerShown: false }} />
-        <Stack.Screen name="create-journey" options={{ headerShown: false }} />
-        <Stack.Screen name="add-expense" options={{ headerShown: false }} />
-        <Stack.Screen name="import-expenses" options={{ title: 'Import Expenses', presentation: 'modal' }} />
-        <Stack.Screen name="add-member" options={{ title: 'Add Member', presentation: 'modal' }} />
+      <Stack screenOptions={{ headerShown: false }}>
+        <Stack.Screen name="login/login" />
+        <Stack.Screen name="(tabs)" />
+        <Stack.Screen name="modal/modal" options={{ presentation: 'modal', title: 'Modal', headerShown: true }} />
+        <Stack.Screen name="journey/[id]" />
+        <Stack.Screen name="create-journey/create-journey" />
+        <Stack.Screen name="add-expense/add-expense" />
+        <Stack.Screen name="import-expenses/import-expenses" options={{ title: 'Import Expenses', presentation: 'modal', headerShown: true }} />
+        <Stack.Screen name="add-member/add-member" options={{ title: 'Add Member', presentation: 'modal', headerShown: true }} />
       </Stack>
       <StatusBar style="auto" />
     </ThemeProvider>

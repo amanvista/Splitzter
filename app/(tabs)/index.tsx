@@ -25,7 +25,7 @@ export default function HomeScreen() {
   );
 
   const handleAddJourney = () => {
-    router.push('/create-journey');
+    router.push('/create-journey/create-journey');
   };
 
   return (

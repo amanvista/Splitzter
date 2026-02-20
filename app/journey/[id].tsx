@@ -68,19 +68,19 @@ export default function JourneyDetailScreen() {
   };
 
   const handleAddExpense = () => {
-    router.push(`/add-expense?journeyId=${id}`);
+    router.push(`/add-expense/add-expense?journeyId=${id}`);
   };
 
   const handleImportExpenses = () => {
-    router.push(`/import-expenses?journeyId=${id}`);
+    router.push(`/import-expenses/import-expenses?journeyId=${id}`);
   };
 
   const handleAddMember = () => {
-    router.push(`/add-member?journeyId=${id}`);
+    router.push(`/add-member/add-member?journeyId=${id}`);
   };
 
   const handleEditExpense = (expenseId: string) => {
-    router.push(`/add-expense?journeyId=${id}&expenseId=${expenseId}`);
+    router.push(`/add-expense/add-expense?journeyId=${id}&expenseId=${expenseId}`);
   };
 
   const handleEditJourney = async (name: string, description: string) => {
