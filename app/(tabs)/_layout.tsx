@@ -21,10 +21,17 @@ export default function TabLayout() {
         },
       }}>
       <Tabs.Screen
-        name="index"
+        name="tables"
         options={{
           title: 'Tables',
           tabBarIcon: ({ color }) => <IconSymbol size={28} name="table.furniture.fill" color={color} />,
+        }}
+      />
+      <Tabs.Screen
+        name="discover"
+        options={{
+          title: 'Discover',
+          tabBarIcon: ({ color }) => <IconSymbol size={28} name="sparkles" color={color} />,
         }}
       />
       <Tabs.Screen
